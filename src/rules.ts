@@ -12,7 +12,7 @@ function getRange(params: { attacker: Character; distance: number }) {
   const { attacker, distance } = params;
   const { ranges } = attacker.weapon;
   for (const r of Weapon.shape.ranges.keySchema.options) {
-    if (ranges[r] && ranges[r] <= distance) {
+    if (ranges[r] && distance <= ranges[r]) {
       return r;
     }
   }
@@ -158,7 +158,6 @@ function getDamageDiceCount(params: {
         total += 0;
         break;
     }
-  } else {
   }
   if (result === "Crit") {
     total += 1;

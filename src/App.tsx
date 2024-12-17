@@ -1,11 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import "./App.css";
 import { ThemeProvider } from "./components/theme-provider";
 import {
   Form,
   FormControl,
   FormField,
+  FormFieldContext,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "./components/ui/form";
 import {
   z,
@@ -31,7 +34,7 @@ import {
   type UseFormReturn,
 } from "react-hook-form";
 import { Input } from "./components/ui/input";
-import { DefaultArmor, DefaultWeapons } from "./rules";
+import { attackSetup, DefaultArmor, DefaultWeapons } from "./rules";
 import {
   Select,
   SelectContent,
@@ -59,6 +62,7 @@ import {
   Armor,
   SelectForm,
   DefaultChar,
+  resolveCharacter,
 } from "./schema";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Label } from "./components/ui/label";
@@ -71,12 +75,15 @@ function StringField<TFieldValues extends FieldValues>(props: {
 }) {
   const { form, name, label, placeholder } = props;
   return (
-    <FormItem>
-      <FormLabel>{label}</FormLabel>
-      <FormControl>
-        <Input placeholder={placeholder} {...form.register(name)} />
-      </FormControl>
-    </FormItem>
+    <FormFieldContext.Provider value={{ name }}>
+      <FormItem>
+        <FormLabel>{label}</FormLabel>
+        <FormControl>
+          <Input placeholder={placeholder} {...form.register(name)} />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormFieldContext.Provider>
   );
 }
 
@@ -87,19 +94,22 @@ function NumberField<TFieldValues extends FieldValues>(props: {
 }) {
   const { form, name, label } = props;
   return (
-    <FormItem>
-      <FormLabel>{label}</FormLabel>
-      <FormControl>
-        <Input {...form.register(name)} />
-      </FormControl>
-    </FormItem>
+    <FormFieldContext.Provider value={{ name }}>
+      <FormItem>
+        <FormLabel>{label}</FormLabel>
+        <FormControl>
+          <Input {...form.register(name)} />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormFieldContext.Provider>
   );
 }
 
 const Checkbox2 = React.forwardRef<
   HTMLInputElement,
   React.ComponentProps<"input">
->(({ className, type, ...props }, ref) => {
+>(({ className, ...props }, ref) => {
   return (
     <div className="grid">
       <input
@@ -241,24 +251,26 @@ function EnumField<TFieldValues extends FieldValues>(props: {
   const { form, type, name, label, optionNames } = props;
 
   return (
-    <FormItem>
-      <FormLabel>{label}</FormLabel>
-      <FormControl>
-        <RadioGroup
-          form={form}
-          name={name}
-          options={type.options}
-          render={(field, value, idx) => (
-            <RadioButton
-              key={value}
-              {...field}
-              value={value}
-              label={optionNames?.[idx] || value}
-            />
-          )}
-        />
-      </FormControl>
-    </FormItem>
+    <FormFieldContext.Provider value={{ name }}>
+      <FormItem>
+        <FormLabel>{label}</FormLabel>
+        <FormControl>
+          <RadioGroup
+            form={form}
+            name={name}
+            options={type.options}
+            render={(field, value, idx) => (
+              <RadioButton
+                key={value}
+                {...field}
+                value={value}
+                label={optionNames?.[idx] || value}
+              />
+            )}
+          />
+        </FormControl>
+      </FormItem>
+    </FormFieldContext.Provider>
   );
 
   // return (
@@ -539,17 +551,20 @@ function ObjectEditor(props: {
     name: string;
   }>;
 
+  function setIdx(newIdx: number) {
+    form.setValue(`${prefix}.idx`, newIdx);
+    form.reset(undefined, {
+      keepValues: true,
+    });
+  }
+
   function create() {
     const newIdx = list.length;
     form.setValue(`${prefix}.list.${newIdx}`, {
       ...DefaultChar,
       name: `Random ${(i += 1)}`,
     });
-    form.setValue(`${prefix}.idx`, newIdx);
-    form.reset(undefined, {
-      keepValues: true,
-    });
-    // form.reset(form.getValues());
+    setIdx(newIdx);
   }
 
   return (
@@ -568,16 +583,7 @@ function ObjectEditor(props: {
                   <Select
                     {...field}
                     value={String(field.value)}
-                    onValueChange={(x) => {
-                      form.setValue(`${prefix}.idx`, Number(x));
-
-                      form.reset(undefined, {
-                        keepValues: true,
-                      });
-                      // const values = form.getValues();
-                      // form.reset(undefined, { keepValues: true });
-                      // form.setValue("", values);
-                    }}
+                    onValueChange={(x) => setIdx(Number(x))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -599,12 +605,48 @@ function ObjectEditor(props: {
         </div>
         {render(`${prefix}.list.${idx}`)}
       </CardContent>
-      <CardFooter></CardFooter>
     </Card>
   );
 }
 
-function Main(props: {}) {
+function CombatForm(props: { form: UseFormReturn<SelectForm> }) {
+  const { form } = props;
+  const values = form.getValues();
+  const characters = values.character.list.map((x) => x.name);
+
+  const attacker = resolveCharacter(values, values.inProgress.attacker);
+  const defender = resolveCharacter(values, values.inProgress.defender);
+  const distance = Number(values.inProgress.distance);
+
+  if (attacker && defender) {
+    console.log(attackSetup({ attacker, defender, distance }));
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Combat</CardTitle>
+      </CardHeader>
+      <CardContent className="flex gap-4 flex-col">
+        <RefField
+          form={form}
+          name="inProgress.attacker"
+          label="Attacker"
+          optionLabels={characters}
+        />
+        <RefField
+          form={form}
+          name="inProgress.defender"
+          label="Defender"
+          optionLabels={characters}
+        />
+        <NumberField form={form} label="Distance" name="inProgress.distance" />
+      </CardContent>
+    </Card>
+  );
+}
+
+function Main() {
   console.log("render");
   const form = useForm<SelectForm>({
     mode: "onChange",
@@ -617,6 +659,7 @@ function Main(props: {}) {
       },
       weapon: { list: [...DefaultWeapons], idx: "0" },
       armor: { list: [...DefaultArmor], idx: "0" },
+      inProgress: {},
     },
   });
 
@@ -624,6 +667,7 @@ function Main(props: {}) {
     SelectForm.parse(form.getValues());
   } catch (e) {
     console.log(e);
+    console.log(form.formState.errors);
   }
 
   return (
@@ -652,6 +696,7 @@ function Main(props: {}) {
           <ArmorForm key={prefix} prefix={prefix} form={form} />
         )}
       />
+      <CombatForm form={form} />
     </Form>
   );
 }
@@ -659,7 +704,7 @@ function Main(props: {}) {
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <div className="max-w-xl">
+      <div className="max-w-xl flex flex-col gap-3">
         <Main />
       </div>
     </ThemeProvider>

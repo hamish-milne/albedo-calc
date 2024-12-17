@@ -88,12 +88,63 @@ export function ListSelect<T extends ZodTypeAny>(t: T) {
   });
 }
 
+const DiceRoll = z.array(Integer);
+
 export const SelectForm = z.strictObject({
   character: ListSelect(CharacterRecord),
   weapon: ListSelect(Weapon),
   armor: ListSelect(Armor),
+  inProgress: z.strictObject({
+    attacker: Integer.describe("Attacker"),
+    defender: Integer.describe("Defender"),
+    distance: Integer.describe("Distance"),
+    attackRoll: DiceRoll.describe("Attack roll"),
+    defenseRoll: DiceRoll.describe("Defense roll"),
+    damageRoll: DiceRoll.describe("Damage roll"),
+  }),
 });
 export type SelectForm = z.input<typeof SelectForm>;
+
+export function resolveWeapon(
+  values: SelectForm,
+  idx: string | number
+): Weapon | undefined {
+  const result = Weapon.safeParse(values.weapon.list[idx as number]);
+  if (result.success) {
+    return result.data;
+  }
+}
+
+export function resolveArmor(
+  values: SelectForm,
+  idx: string | number
+): Armor | undefined {
+  const result = Armor.safeParse(values.armor.list[idx as number]);
+  if (result.success) {
+    return result.data;
+  }
+}
+
+export function resolveCharacter(
+  values: SelectForm,
+  idx: string | number
+): Character | undefined {
+  const result = CharacterRecord.safeParse(
+    values.character.list[idx as number]
+  );
+  if (result.success) {
+    const armor = resolveArmor(values, result.data.armor);
+    const weapon = resolveWeapon(values, result.data.weapon);
+    if (!armor || !weapon) {
+      return;
+    }
+    return {
+      ...result.data,
+      armor,
+      weapon,
+    };
+  }
+}
 
 export const DefaultChar: z.input<typeof CharacterRecord> = {
   name: "Person personson",
