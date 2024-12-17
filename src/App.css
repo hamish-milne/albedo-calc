@@ -1,0 +1,10 @@
+#root {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.grid-overlap {
+  grid-row: 1;
+  grid-column: 1;
+}
