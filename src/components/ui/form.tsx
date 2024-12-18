@@ -12,6 +12,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { cva } from "class-variance-authority";
 
 const Form = FormProvider;
 
@@ -105,6 +106,26 @@ const FormLabel = React.forwardRef<
 });
 FormLabel.displayName = "FormLabel";
 
+const legendVariants = cva(
+  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+);
+
+const FormLegend = React.forwardRef<
+  HTMLLegendElement,
+  React.ComponentProps<"legend">
+>(({ className, ...props }, ref) => {
+  const { error } = useFormField();
+
+  return (
+    <legend
+      ref={ref}
+      className={cn(error && "text-destructive", legendVariants(), className)}
+      {...props}
+    />
+  );
+});
+FormLegend.displayName = "FormLegend";
+
 const FormControl = React.forwardRef<
   React.ElementRef<typeof Slot>,
   React.ComponentPropsWithoutRef<typeof Slot>
@@ -170,10 +191,10 @@ const FormMessage = React.forwardRef<
 FormMessage.displayName = "FormMessage";
 
 export {
-  useFormField,
   Form,
   FormItem,
   FormLabel,
+  FormLegend,
   FormControl,
   FormDescription,
   FormMessage,

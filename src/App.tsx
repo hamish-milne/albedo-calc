@@ -8,10 +8,10 @@ import {
   FormFieldContext,
   FormItem,
   FormLabel,
+  FormLegend,
   FormMessage,
 } from "./components/ui/form";
 import {
-  z,
   ZodBoolean,
   ZodEffects,
   ZodEnum,
@@ -34,7 +34,15 @@ import {
   type UseFormReturn,
 } from "react-hook-form";
 import { Input } from "./components/ui/input";
-import { attackSetup, DefaultArmor, DefaultWeapons } from "./rules";
+import {
+  applyResult,
+  attackResolve,
+  attackSetup,
+  damageResolve,
+  DefaultArmor,
+  DefaultWeapons,
+  type AttackResult,
+} from "./rules";
 import {
   Select,
   SelectContent,
@@ -42,14 +50,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./components/ui/select";
-import { type JSX } from "react";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "./components/ui/card";
+import type { JSX } from "react";
 import { Button } from "./components/ui/button";
 import { cn } from "./lib/utils";
 import React from "react";
@@ -62,10 +63,16 @@ import {
   Armor,
   SelectForm,
   DefaultChar,
-  resolveCharacter,
+  type Character,
+  Range,
 } from "./schema";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Label } from "./components/ui/label";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "./components/ui/accordion";
 
 function StringField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
@@ -91,11 +98,12 @@ function NumberField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
   name: Path<TFieldValues>;
   label: string;
+  className?: string;
 }) {
-  const { form, name, label } = props;
+  const { form, name, label, className } = props;
   return (
     <FormFieldContext.Provider value={{ name }}>
-      <FormItem>
+      <FormItem className={className}>
         <FormLabel>{label}</FormLabel>
         <FormControl>
           <Input {...form.register(name)} />
@@ -188,20 +196,22 @@ interface RadioButtonProps
 const RadioButton = React.forwardRef<HTMLInputElement, RadioButtonProps>(
   ({ className, variant, size, label, ...props }, ref) => {
     return (
-      <div className="grid flex-1 items-center">
-        <input
-          type="radio"
-          className={cn(
-            radioVariants({ variant, size, className }),
-            "appearance-none grid-overlap"
-          )}
-          ref={ref}
-          {...props}
-        />
-        <Label className="grid-overlap pointer-events-none text-center">
+      <FormItem className="flex-1 flex flex-row items-center gap-0">
+        <FormControl>
+          <input
+            type="radio"
+            className={cn(
+              radioVariants({ variant, size, className }),
+              "appearance-none w-full cursor-pointer"
+            )}
+            ref={ref}
+            {...props}
+          />
+        </FormControl>
+        <FormLabel className="pointer-events-none w-full text-center ml-[-100%]">
           {label}
-        </Label>
-      </div>
+        </FormLabel>
+      </FormItem>
     );
   }
 );
@@ -252,9 +262,9 @@ function EnumField<TFieldValues extends FieldValues>(props: {
 
   return (
     <FormFieldContext.Provider value={{ name }}>
-      <FormItem>
-        <FormLabel>{label}</FormLabel>
-        <FormControl>
+      <fieldset>
+        <div className="flex flex-col gap-2">
+          <FormLegend>{label}</FormLegend>
           <RadioGroup
             form={form}
             name={name}
@@ -268,8 +278,8 @@ function EnumField<TFieldValues extends FieldValues>(props: {
               />
             )}
           />
-        </FormControl>
-      </FormItem>
+        </div>
+      </fieldset>
     </FormFieldContext.Provider>
   );
 
@@ -313,20 +323,20 @@ function RefField<TFieldValues extends FieldValues>(props: {
       render={({ field }) => (
         <FormItem>
           <FormLabel>{label}</FormLabel>
-          <FormControl>
-            <Select {...field} onValueChange={field.onChange}>
+          <Select {...field} onValueChange={field.onChange}>
+            <FormControl>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                {optionLabels.map((x, i) => (
-                  <SelectItem key={i} value={i.toString()}>
-                    {x}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormControl>
+            </FormControl>
+            <SelectContent>
+              {optionLabels.map((x, i) => (
+                <SelectItem key={i} value={i.toString()}>
+                  {x}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormItem>
       )}
     />
@@ -543,10 +553,9 @@ let i = 0;
 function ObjectEditor(props: {
   form: UseFormReturn<any>;
   prefix: string;
-  title: string;
   render: (this: void, prefix: string) => JSX.Element;
 }) {
-  const { form, prefix, title, render } = props;
+  const { form, prefix, render } = props;
   const { list, idx } = form.getValues()[prefix] as ListSelect<{
     name: string;
   }>;
@@ -568,44 +577,276 @@ function ObjectEditor(props: {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex gap-4 flex-col">
-        <div className="flex gap-2">
-          <FormField
-            name={`${prefix}.idx`}
-            control={form.control}
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormControl>
-                  <Select
-                    {...field}
-                    value={String(field.value)}
-                    onValueChange={(x) => setIdx(Number(x))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {list.map((x, i) => (
-                        <SelectItem key={i} value={String(i)}>
-                          {x.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-              </FormItem>
-            )}
+    <div className="flex gap-4 flex-col">
+      <div className="flex gap-2">
+        <FormField
+          name={`${prefix}.idx`}
+          control={form.control}
+          render={({ field }) => (
+            <FormItem className="flex-1">
+              <FormControl>
+                <Select
+                  {...field}
+                  value={String(field.value)}
+                  onValueChange={(x) => setIdx(Number(x))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {list.map((x, i) => (
+                      <SelectItem key={i} value={String(i)}>
+                        {x.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <Button onClick={create}>New</Button>
+        <Button>Delete</Button>
+      </div>
+      {render(`${prefix}.list.${idx}`)}
+    </div>
+  );
+}
+
+function getCharacter(form: UseFormReturn<SelectForm>, idx: number): Character {
+  const record = CharacterRecord.parse(form.watch(`character.list.${idx}`));
+  const weapon = Weapon.parse(form.watch(`weapon.list.${record.weapon}`));
+  const armor = Armor.parse(form.watch(`armor.list.${record.armor}`));
+  return { ...record, weapon, armor };
+}
+
+function trySetupCombat(form: UseFormReturn<SelectForm>) {
+  try {
+    const inProgress = SelectForm.shape.setup.parse(form.watch("setup"));
+    return {
+      attacker: getCharacter(form, inProgress.attacker),
+      defender: getCharacter(form, inProgress.defender),
+      distance: inProgress.distance,
+    };
+  } catch (_) {
+    return;
+  }
+}
+
+function DiceGroup(props: {
+  form: UseFormReturn<SelectForm>;
+  dice: number[];
+  prefix: Path<SelectForm>;
+  label: string;
+}) {
+  const { form, dice, prefix, label } = props;
+  // const result = form.watch(prefix) as number[] | undefined;
+  // useEffect(() => {
+  //   if (!result || result.length != dice.length) {
+  //     form.setValue(
+  //       prefix,
+  //       (result || []).concat(Array(dice.length).fill(0)).slice(dice.length)
+  //     );
+  //     form.reset(undefined, { keepValues: true });
+  //   }
+  // }, [dice.length, form, prefix]);
+  if (dice.length === 0) {
+    return <></>;
+  }
+
+  function rollForMe() {
+    for (let i = 0; i < dice.length; i++) {
+      form.setValue(
+        `${prefix}.${i}` as Path<SelectForm>,
+        1 + Math.floor(Math.random() * dice[i])
+      );
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="text-sm font-medium leading-none">{label}</div>
+      <div className="flex gap-2">
+        {dice.map((d, i) => (
+          <NumberField
+            className="w-12"
+            key={i}
+            form={form}
+            label={`d${d}`}
+            name={`${prefix}.${i}` as Path<SelectForm>}
           />
-          <Button onClick={create}>New</Button>
-          <Button>Delete</Button>
-        </div>
-        {render(`${prefix}.list.${idx}`)}
-      </CardContent>
-    </Card>
+        ))}
+        <Button className="self-end" onClick={rollForMe}>
+          Roll
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const rangeName = {
+  C: "Close",
+  S: "Short",
+  M: "Medium",
+  L: "Long",
+  X: "Extreme",
+};
+
+function CombatSetup(props: {
+  attacker: Character;
+  defender: Character;
+  distance: number;
+  form: UseFormReturn<SelectForm>;
+}) {
+  const { form } = props;
+  const result = attackSetup(props);
+
+  if (!result.range) {
+    return <p>Out of range!</p>;
+  }
+
+  const toHit = SelectForm.shape.toHit.safeParse(form.watch("toHit"));
+  const toHitFixed = toHit.success
+    ? {
+        attackRoll:
+          typeof result.attackDice === "number"
+            ? [result.attackDice]
+            : toHit.data.attackRoll.slice(0, result.attackDice.length),
+        defenseRoll: toHit.data.defenseRoll.slice(0, result.defenseDice.length),
+      }
+    : undefined;
+
+  return (
+    <>
+      <p>
+        <b>{result.attacker.name}</b> will attack <b>{result.defender.name}</b>{" "}
+        with <b>{result.attacker.weapon.name}</b> at{" "}
+        <b>{rangeName[result.range]}</b> range.
+      </p>
+      {typeof result.attackDice === "number" ? (
+        <p>
+          Attacker will rote for <b>{result.attackDice}</b>
+        </p>
+      ) : (
+        <DiceGroup
+          form={form}
+          prefix="toHit.attackRoll"
+          label="Attack dice"
+          dice={result.attackDice}
+        />
+      )}
+      <DiceGroup
+        form={form}
+        prefix="toHit.defenseRoll"
+        label="Defense dice"
+        dice={result.defenseDice}
+      />
+
+      {toHitFixed ? (
+        <CombatResolve
+          form={form}
+          {...result}
+          range={result.range}
+          {...toHitFixed}
+        />
+      ) : (
+        <p className="text-[0.8rem] font-medium text-destructive">
+          Invalid dice roll values
+        </p>
+      )}
+    </>
+  );
+}
+
+function CombatResolve(props: {
+  form: UseFormReturn<SelectForm>;
+  attacker: Character;
+  defender: Character;
+  attackRoll: number[];
+  defenseRoll: number[];
+  range: Range;
+}) {
+  const { form } = props;
+  const result = attackResolve(props);
+  const { attacker, defender, damageDiceCount } = result;
+
+  const resolved = SelectForm.shape.resolve.safeParse(form.watch("resolve"));
+  const resolvedFixed = resolved.success
+    ? {
+        damageRoll: resolved.data.damageRoll.slice(0, damageDiceCount),
+      }
+    : undefined;
+
+  return (
+    <>
+      <p>
+        {attacker.name} will <b>{result.result}</b> {defender.name}!
+      </p>
+      <DiceGroup
+        dice={Array(damageDiceCount).fill(20)}
+        form={form}
+        label="Damage dice"
+        prefix="resolve.damageRoll"
+      />
+      {resolvedFixed ? (
+        <DamageResolve form={form} {...result} {...resolvedFixed} />
+      ) : (
+        <p className="text-[0.8rem] font-medium text-destructive">
+          Invalid dice roll values
+        </p>
+      )}
+    </>
+  );
+}
+
+function DamageResolve(props: {
+  form: UseFormReturn<SelectForm>;
+  attacker: Character;
+  defender: Character;
+  damageRoll: number[];
+  range: Range;
+  result: AttackResult;
+}) {
+  const { form } = props;
+  const result = damageResolve(props);
+  const { defender, totalDamage, newStatus, awe, injury } = result;
+
+  const defenderIdx = form.watch(`setup.defender`);
+
+  console.log(form.getValues());
+
+  function apply() {
+    const toSet = applyResult(result);
+    for (const [key, value] of Object.entries(toSet)) {
+      form.setValue(
+        `character.list.${defenderIdx as number}.${key as keyof CharacterRecord}`,
+        value
+      );
+    }
+    const names = [
+      "toHit.attackRoll",
+      "toHit.defenseRoll",
+      "resolve.damageRoll",
+    ] as const;
+    for (const name of names) {
+      for (let i = 0; i < 10; i++) {
+        form.setValue(`${name}.${i}`, 0);
+      }
+    }
+    form.reset(undefined, {
+      keepValues: true,
+    });
+  }
+
+  return (
+    <>
+      <p>
+        After an attack of <b>{totalDamage}</b>, {defender.name} goes from{" "}
+        {defender.status} to <b>{newStatus}</b>, taking <b>{injury}</b> injuries
+        and <b>{awe}</b> awe.
+      </p>
+      <Button onClick={apply}>Apply result</Button>
+    </>
   );
 }
 
@@ -614,40 +855,37 @@ function CombatForm(props: { form: UseFormReturn<SelectForm> }) {
   const values = form.getValues();
   const characters = values.character.list.map((x) => x.name);
 
-  const attacker = resolveCharacter(values, values.inProgress.attacker);
-  const defender = resolveCharacter(values, values.inProgress.defender);
-  const distance = Number(values.inProgress.distance);
-
-  if (attacker && defender) {
-    console.log(attackSetup({ attacker, defender, distance }));
-  }
+  const setup = trySetupCombat(form);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Combat</CardTitle>
-      </CardHeader>
-      <CardContent className="flex gap-4 flex-col">
-        <RefField
-          form={form}
-          name="inProgress.attacker"
-          label="Attacker"
-          optionLabels={characters}
-        />
-        <RefField
-          form={form}
-          name="inProgress.defender"
-          label="Defender"
-          optionLabels={characters}
-        />
-        <NumberField form={form} label="Distance" name="inProgress.distance" />
-      </CardContent>
-    </Card>
+    <div className="flex gap-4 flex-col">
+      <RefField
+        form={form}
+        name="setup.attacker"
+        label="Attacker"
+        optionLabels={characters}
+      />
+      <RefField
+        form={form}
+        name="setup.defender"
+        label="Defender"
+        optionLabels={characters}
+      />
+      <NumberField form={form} label="Distance" name="setup.distance" />
+
+      {setup ? (
+        <CombatSetup {...setup} form={form} />
+      ) : (
+        <p className="text-[0.8rem] font-medium text-destructive">
+          Unable to start combat due to form errors
+        </p>
+      )}
+    </div>
   );
 }
 
 function Main() {
-  console.log("render");
+  // console.log("render");
   const form = useForm<SelectForm>({
     mode: "onChange",
     shouldUseNativeValidation: true,
@@ -659,44 +897,69 @@ function Main() {
       },
       weapon: { list: [...DefaultWeapons], idx: "0" },
       armor: { list: [...DefaultArmor], idx: "0" },
-      inProgress: {},
+      toHit: {
+        attackRoll: [],
+        defenseRoll: [],
+      },
+      resolve: {
+        damageRoll: [],
+      },
     },
   });
 
-  try {
-    SelectForm.parse(form.getValues());
-  } catch (e) {
-    console.log(e);
-    console.log(form.formState.errors);
-  }
+  // try {
+  //   SelectForm.parse(form.getValues());
+  // } catch (e) {
+  //   console.log(e);
+  //   console.log(form.formState.errors);
+  // }
 
   return (
     <Form {...form}>
-      <ObjectEditor
-        form={form}
-        prefix="character"
-        title={CharacterRecord.description!}
-        render={(prefix) => (
-          <CharacterForm key={prefix} prefix={prefix} form={form} />
-        )}
-      />
-      <ObjectEditor
-        form={form}
-        prefix="weapon"
-        title={Weapon.description!}
-        render={(prefix) => (
-          <WeaponForm key={prefix} prefix={prefix} form={form} />
-        )}
-      />
-      <ObjectEditor
-        form={form}
-        prefix="armor"
-        title={Armor.description!}
-        render={(prefix) => (
-          <ArmorForm key={prefix} prefix={prefix} form={form} />
-        )}
-      />
-      <CombatForm form={form} />
+      <Accordion type="multiple">
+        <AccordionItem value="character">
+          <AccordionTrigger>Character</AccordionTrigger>
+          <AccordionContent>
+            <ObjectEditor
+              form={form}
+              prefix="character"
+              render={(prefix) => (
+                <CharacterForm key={prefix} prefix={prefix} form={form} />
+              )}
+            />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="weapon">
+          <AccordionTrigger>Weapon</AccordionTrigger>
+          <AccordionContent>
+            <ObjectEditor
+              form={form}
+              prefix="weapon"
+              render={(prefix) => (
+                <WeaponForm key={prefix} prefix={prefix} form={form} />
+              )}
+            />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="armor">
+          <AccordionTrigger>Armor</AccordionTrigger>
+          <AccordionContent>
+            <ObjectEditor
+              form={form}
+              prefix="armor"
+              render={(prefix) => (
+                <ArmorForm key={prefix} prefix={prefix} form={form} />
+              )}
+            />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="combat">
+          <AccordionTrigger>Combat</AccordionTrigger>
+          <AccordionContent>
+            <CombatForm form={form} />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </Form>
   );
 }

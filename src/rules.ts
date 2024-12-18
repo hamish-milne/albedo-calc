@@ -19,7 +19,7 @@ function getRange(params: { attacker: Character; distance: number }) {
   return undefined;
 }
 
-type AttackResult = "Miss" | "Tie" | "Hit" | "Crit";
+export type AttackResult = "Miss" | "Tie" | "Hit" | "Crit";
 
 function marksToDice(x: number): number {
   if (x < 1) {
@@ -323,12 +323,11 @@ export function applyResult(params: {
   newStatus: Status;
   injury: number;
   awe: number;
-}): Character {
+}) {
   const { defender, newStatus, awe, injury } = params;
 
   const statusOrder = Status.options;
   return {
-    ...defender,
     morale: Math.max(defender.morale - awe, 0),
     status:
       statusOrder[
