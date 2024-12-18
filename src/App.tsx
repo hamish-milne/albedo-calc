@@ -53,7 +53,7 @@ import {
 import type { JSX } from "react";
 import { Button } from "./components/ui/button";
 import { cn } from "./lib/utils";
-import React from "react";
+import React, { useEffect } from "react";
 import { Check } from "lucide-react";
 import {
   BoolInput,
@@ -884,19 +884,23 @@ function CombatForm(props: { form: UseFormReturn<SelectForm> }) {
   );
 }
 
+const defaultOpen = (() => {
+  const data = localStorage.getItem("open");
+  return data ? JSON.parse(data) : ["character", "combat"];
+})();
+
 function Main() {
   // console.log("render");
   const form = useForm<SelectForm>({
-    mode: "onChange",
-    shouldUseNativeValidation: true,
+    mode: "onBlur",
     resolver: zodResolver(SelectForm),
     defaultValues: {
       character: {
-        list: [DefaultChar],
+        list: [],
         idx: "0",
       },
-      weapon: { list: [...DefaultWeapons], idx: "0" },
-      armor: { list: [...DefaultArmor], idx: "0" },
+      weapon: { list: [], idx: "0" },
+      armor: { list: [], idx: "0" },
       toHit: {
         attackRoll: [],
         defenseRoll: [],
@@ -907,6 +911,30 @@ function Main() {
     },
   });
 
+  useEffect(() => {
+    const data = localStorage.getItem("data");
+    const values: SelectForm = data
+      ? JSON.parse(data)
+      : {
+          character: {
+            list: [DefaultChar],
+            idx: "0",
+          },
+          weapon: { list: [...DefaultWeapons], idx: "0" },
+          armor: { list: [...DefaultArmor], idx: "0" },
+          toHit: { attackRoll: [], defenseRoll: [] },
+          resolve: { damageRoll: [] },
+        };
+    form.reset(values);
+  }, []);
+
+  useEffect(() => {
+    const subscription = form.watch((value) =>
+      localStorage.setItem("data", JSON.stringify(value))
+    );
+    return () => subscription.unsubscribe();
+  }, [form.watch]);
+
   // try {
   //   SelectForm.parse(form.getValues());
   // } catch (e) {
@@ -916,7 +944,13 @@ function Main() {
 
   return (
     <Form {...form}>
-      <Accordion type="multiple">
+      <Accordion
+        type="multiple"
+        defaultValue={defaultOpen}
+        onValueChange={(value) =>
+          localStorage.setItem("open", JSON.stringify(value))
+        }
+      >
         <AccordionItem value="character">
           <AccordionTrigger>Character</AccordionTrigger>
           <AccordionContent>
