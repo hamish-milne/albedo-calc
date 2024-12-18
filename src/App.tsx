@@ -54,7 +54,7 @@ import type { JSX } from "react";
 import { Button } from "./components/ui/button";
 import { cn } from "./lib/utils";
 import React, { useEffect, useMemo, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import {
   BoolInput,
   Bool,
@@ -991,17 +991,26 @@ function LogItem({
 
 function CombatLog(props: {
   items: LogItem[];
-  delete: (this: void, idx: number) => void;
+  deleteItem: (this: void, idx: number) => void;
 }) {
-  const { items } = props;
+  const { items, deleteItem } = props;
 
   return (
     <Table>
       <TableBody>
-        {items.map((item) => (
+        {items.map((item, idx) => (
           <TableRow>
             <TableCell>
               <LogItem {...item} />
+            </TableCell>
+            <TableCell>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => deleteItem(idx)}
+              >
+                <X className="text-destructive" />
+              </Button>
             </TableCell>
           </TableRow>
         ))}
@@ -1079,6 +1088,13 @@ function Main() {
     localStorage.setItem("log", JSON.stringify(newItems));
   }
 
+  function deleteItem(idx: number) {
+    const newItems = [...items];
+    newItems.splice(idx, 1);
+    setItems(newItems);
+    localStorage.setItem("log", JSON.stringify(newItems));
+  }
+
   return (
     <Form {...form}>
       <Accordion
@@ -1133,7 +1149,7 @@ function Main() {
         <AccordionItem value="log">
           <AccordionTrigger>Log</AccordionTrigger>
           <AccordionContent>
-            <CombatLog items={items} delete={() => {}} />
+            <CombatLog items={items} deleteItem={deleteItem} />
           </AccordionContent>
         </AccordionItem>
       </Accordion>
