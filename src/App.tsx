@@ -53,7 +53,7 @@ import {
 import type { JSX } from "react";
 import { Button } from "./components/ui/button";
 import { cn } from "./lib/utils";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import {
   BoolInput,
@@ -65,6 +65,7 @@ import {
   DefaultChar,
   type Character,
   Range,
+  Status,
 } from "./schema";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
@@ -73,6 +74,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "./components/ui/accordion";
+import { Table, TableBody, TableCell, TableRow } from "./components/ui/table";
 
 function StringField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
@@ -697,8 +699,9 @@ function CombatSetup(props: {
   defender: Character;
   distance: number;
   form: UseFormReturn<SelectForm>;
+  addItem: (this: void, item: LogItem) => void;
 }) {
-  const { form } = props;
+  const { form, addItem } = props;
   const result = attackSetup(props);
 
   if (!result.range) {
@@ -710,7 +713,7 @@ function CombatSetup(props: {
     ? {
         attackRoll:
           typeof result.attackDice === "number"
-            ? [result.attackDice]
+            ? result.attackDice
             : toHit.data.attackRoll.slice(0, result.attackDice.length),
         defenseRoll: toHit.data.defenseRoll.slice(0, result.defenseDice.length),
       }
@@ -745,6 +748,7 @@ function CombatSetup(props: {
       {toHitFixed ? (
         <CombatResolve
           form={form}
+          addItem={addItem}
           {...result}
           range={result.range}
           {...toHitFixed}
@@ -760,13 +764,14 @@ function CombatSetup(props: {
 
 function CombatResolve(props: {
   form: UseFormReturn<SelectForm>;
+  addItem: (this: void, item: LogItem) => void;
   attacker: Character;
   defender: Character;
-  attackRoll: number[];
+  attackRoll: number | number[];
   defenseRoll: number[];
   range: Range;
 }) {
-  const { form } = props;
+  const { form, addItem } = props;
   const result = attackResolve(props);
   const { attacker, defender, damageDiceCount } = result;
 
@@ -789,7 +794,12 @@ function CombatResolve(props: {
         prefix="resolve.damageRoll"
       />
       {resolvedFixed ? (
-        <DamageResolve form={form} {...result} {...resolvedFixed} />
+        <DamageResolve
+          form={form}
+          addItem={addItem}
+          {...result}
+          {...resolvedFixed}
+        />
       ) : (
         <p className="text-[0.8rem] font-medium text-destructive">
           Invalid dice roll values
@@ -801,13 +811,16 @@ function CombatResolve(props: {
 
 function DamageResolve(props: {
   form: UseFormReturn<SelectForm>;
+  addItem: (this: void, item: LogItem) => void;
   attacker: Character;
   defender: Character;
   damageRoll: number[];
+  attackRoll: number | number[];
+  defenseRoll: number[];
   range: Range;
   result: AttackResult;
 }) {
-  const { form } = props;
+  const { form, addItem } = props;
   const result = damageResolve(props);
   const { defender, totalDamage, newStatus, awe, injury } = result;
 
@@ -836,6 +849,18 @@ function DamageResolve(props: {
     form.reset(undefined, {
       keepValues: true,
     });
+    addItem({
+      ...result,
+      attacker: props.attacker.name,
+      defender: props.defender.name,
+      weapon: props.attacker.weapon.name,
+      attackRoll: props.attackRoll,
+      defenseRoll: props.defenseRoll,
+      newStatus:
+        props.defender.status === result.newStatus
+          ? undefined
+          : result.newStatus,
+    });
   }
 
   return (
@@ -850,8 +875,11 @@ function DamageResolve(props: {
   );
 }
 
-function CombatForm(props: { form: UseFormReturn<SelectForm> }) {
-  const { form } = props;
+function CombatForm(props: {
+  form: UseFormReturn<SelectForm>;
+  addItem: (this: void, item: LogItem) => void;
+}) {
+  const { form, addItem } = props;
   const values = form.getValues();
   const characters = values.character.list.map((x) => x.name);
 
@@ -874,7 +902,7 @@ function CombatForm(props: { form: UseFormReturn<SelectForm> }) {
       <NumberField form={form} label="Distance" name="setup.distance" />
 
       {setup ? (
-        <CombatSetup {...setup} form={form} />
+        <CombatSetup {...setup} form={form} addItem={addItem} />
       ) : (
         <p className="text-[0.8rem] font-medium text-destructive">
           Unable to start combat due to form errors
@@ -884,10 +912,103 @@ function CombatForm(props: { form: UseFormReturn<SelectForm> }) {
   );
 }
 
-const defaultOpen = (() => {
-  const data = localStorage.getItem("open");
-  return data ? JSON.parse(data) : ["character", "combat"];
-})();
+interface LogItem {
+  attacker: string;
+  defender: string;
+  weapon: string;
+  range: Range;
+  attackRoll: number | number[];
+  defenseRoll: number[];
+  result: AttackResult;
+  damageRoll: number[];
+  totalDamage: number;
+  newStatus: Status | undefined;
+  injury: number;
+  awe: number;
+}
+
+function LogItem({
+  attacker,
+  defender,
+  weapon,
+  range,
+  attackRoll,
+  defenseRoll,
+  result,
+  damageRoll,
+  totalDamage,
+  newStatus,
+  injury,
+  awe,
+}: LogItem) {
+  return (
+    <p>
+      <b>{attacker}</b> attacked <b>{defender}</b> with <b>{weapon}</b>, at{" "}
+      <b>{rangeName[range]}</b> range,{" "}
+      {typeof attackRoll === "number" ? (
+        <>
+          roting for <b>{attackRoll}</b>
+        </>
+      ) : (
+        <>
+          rolling{" "}
+          <b>
+            [{attackRoll.join(", ")}]={Math.max(...attackRoll)}
+          </b>
+        </>
+      )}{" "}
+      against{" "}
+      <b>
+        [{defenseRoll.join(", ")}]={Math.max(...defenseRoll)}
+      </b>
+      . The result was a <b>{result}</b>.{" "}
+      {damageRoll.length > 0 ? (
+        <>
+          The damage was{" "}
+          <b>
+            [{damageRoll.join(", ")}]={totalDamage}
+          </b>
+          , and <i>{defender}</i>{" "}
+          {newStatus ? (
+            <>
+              is <b>{newStatus}</b>, taking
+            </>
+          ) : (
+            <>took</>
+          )}{" "}
+          <b>{injury}</b> injuries and <b>{awe}</b> awe.
+        </>
+      ) : awe > 0 ? (
+        <>
+          <i>{defender}</i> took <b>{awe}</b> awe from being attacked.
+        </>
+      ) : (
+        <></>
+      )}
+    </p>
+  );
+}
+
+function CombatLog(props: {
+  items: LogItem[];
+  delete: (this: void, idx: number) => void;
+}) {
+  const { items } = props;
+
+  return (
+    <Table>
+      <TableBody>
+        {items.map((item) => (
+          <TableRow>
+            <TableCell>
+              <LogItem {...item} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
 
 function Main() {
   // console.log("render");
@@ -926,14 +1047,14 @@ function Main() {
           resolve: { damageRoll: [] },
         };
     form.reset(values);
-  }, []);
+  }, [form]);
 
   useEffect(() => {
     const subscription = form.watch((value) =>
       localStorage.setItem("data", JSON.stringify(value))
     );
     return () => subscription.unsubscribe();
-  }, [form.watch]);
+  }, [form]);
 
   // try {
   //   SelectForm.parse(form.getValues());
@@ -941,6 +1062,22 @@ function Main() {
   //   console.log(e);
   //   console.log(form.formState.errors);
   // }
+
+  const defaultOpen = useMemo(() => {
+    const data = localStorage.getItem("open");
+    return data ? JSON.parse(data) : ["character", "combat", "log"];
+  }, []);
+
+  const [items, setItems] = useState<LogItem[]>(() => {
+    const data = localStorage.getItem("log");
+    return data ? JSON.parse(data) : [];
+  });
+
+  function addItem(item: LogItem) {
+    const newItems = [...items, item];
+    setItems(newItems);
+    localStorage.setItem("log", JSON.stringify(newItems));
+  }
 
   return (
     <Form {...form}>
@@ -990,7 +1127,13 @@ function Main() {
         <AccordionItem value="combat">
           <AccordionTrigger>Combat</AccordionTrigger>
           <AccordionContent>
-            <CombatForm form={form} />
+            <CombatForm form={form} addItem={addItem} />
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="log">
+          <AccordionTrigger>Log</AccordionTrigger>
+          <AccordionContent>
+            <CombatLog items={items} delete={() => {}} />
           </AccordionContent>
         </AccordionItem>
       </Accordion>

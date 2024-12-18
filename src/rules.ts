@@ -99,11 +99,12 @@ function getDefenseDice(params: {
 }
 
 function getResult(params: {
-  attackRoll: number[];
+  attackRoll: number | number[];
   defenseRoll: number[];
 }): AttackResult {
   const { attackRoll, defenseRoll } = params;
-  const atk = Math.max(...attackRoll);
+  const atk =
+    typeof attackRoll === "number" ? attackRoll : Math.max(...attackRoll);
   const def = Math.max(...defenseRoll);
   if (atk < def) {
     return "Miss";
@@ -111,7 +112,10 @@ function getResult(params: {
   if (atk === def) {
     return "Tie";
   }
-  if (attackRoll.filter((x) => x > def).length >= 2) {
+  if (
+    typeof attackRoll !== "number" &&
+    attackRoll.filter((x) => x > def).length >= 2
+  ) {
     return "Crit";
   }
   return "Hit";
@@ -283,7 +287,7 @@ export function attackResolve(params: {
   attacker: Character;
   defender: Character;
   range: Range;
-  attackRoll: number[];
+  attackRoll: number | number[];
   defenseRoll: number[];
 }) {
   const a = {
