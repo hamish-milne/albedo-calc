@@ -7,9 +7,6 @@ const Integer = z
 export const BoolInput = z.string().optional();
 export const Bool = z.boolean().optional(); // BoolInput.transform((x) => x === true);
 
-export const Range = z.enum(["C", "S", "M", "L", "X"]);
-export type Range = z.infer<typeof Range>;
-
 export const Skill = z.enum([
   "Brawl",
   "Melee",
@@ -25,7 +22,9 @@ export const Weapon = z
     name: z.string().min(1).describe("Weapon name"),
     skill: Skill.describe("Weapon skill"),
     action: z.enum(["Melee", "Single", "Semi", "Full"]).describe("Action"),
-    ranges: z.record(Range, Integer).describe("Ranges"),
+    ranges: z
+      .record(z.enum(["C", "S", "M", "L", "X"]), Integer)
+      .describe("Ranges"),
     baseDamage: Integer.describe("Base damage"),
     penDamage: Integer.optional().describe("Penetration damage"),
     shotgun: Bool.describe("Use shotgun damage dice"),
@@ -43,35 +42,58 @@ export const Armor = z
   .describe("Armor");
 export type Armor = z.infer<typeof Armor>;
 
-export const Cover = z.enum(["None", "Quarter", "Half", "ThreeQuarter"]);
-export type Cover = z.infer<typeof Cover>;
-
-export const Status = z.enum([
-  "None",
-  "Wounded",
-  "Crippled",
-  "Incapacitated",
-  "Devastated",
-]);
-export type Status = z.infer<typeof Status>;
+const Cover = z
+  .string()
+  .or(z.number())
+  .pipe(z.coerce.number().int().nonnegative().max(4));
 
 export const CharacterRecord = z
   .strictObject({
     name: z.string().min(1).describe("Character name"),
-    body: Integer.describe("Current Body score"),
+    body: Integer.describe("Body score"),
+    injury: Integer.describe("Injury"),
     weapon: Integer.describe("Equipped weapon"),
     marks: z.record(Weapon.shape.skill, Integer),
     mode: z
       .enum(["Rote", "Roll", "Push", "Risk", "Breeze"])
       .describe("Attack mode"),
     armor: Integer.describe("Equipped armor"),
-    status: Status.describe("Wound state"),
-    surprised: Bool.describe("Surprised"),
-    helpless: Bool.describe("Helpless"),
+    woundState: Integer.describe("Wound state"),
     maxCover: Cover.describe("Max cover in environment"),
     concealment: Cover.describe("Concealment in environment"),
-    hiding: Bool.describe("Hiding (taking cover and not attacking)"),
-    morale: Integer.describe("Current Morale"),
+    morale: Integer.describe("Morale"),
+    awe: Integer.describe("Awe"),
+    conditions: z
+      .object({
+        surprised: Bool.describe("Surprised"),
+        helpless: Bool.describe("Helpless"),
+        hiding: Bool.describe("Hiding"),
+        aiming: Bool.describe("Aiming"),
+      })
+      .describe("Conditions"),
+    gifts: z
+      .object({
+        tough: Bool.describe("Tough"),
+        veryTough: Bool.describe("Very Tough"),
+        strong: Bool.describe("Strong"),
+        veryStrong: Bool.describe("Very Strong"),
+        semiAutoExpert: Bool.describe("Semi-Auto Expert"),
+      })
+      .describe("Passive Gifts"),
+    activeGifts: z
+      .object({
+        sniperExpert: Bool.describe("Sniper Expert"),
+        sniperMaster: Bool.describe("Sniper Master"),
+        martialArts: Bool.describe("Martial Arts"),
+        meleeExpert: Bool.describe("Melee Expert"),
+      })
+      .pick({
+        sniperExpert: true,
+        sniperMaster: true,
+        martialArts: true,
+        meleeExpert: true,
+      })
+      .describe("Active Gifts"),
   })
   .describe("Character");
 export type CharacterRecord = z.infer<typeof CharacterRecord>;
@@ -110,24 +132,26 @@ export const SelectForm = z.strictObject({
 export type SelectForm = z.input<typeof SelectForm>;
 
 export const DefaultChar: z.input<typeof CharacterRecord> = {
-  name: "Person personson",
-  body: "7",
+  name: "Donut Steele",
+  body: 7,
+  injury: 0,
   weapon: "0",
   marks: {
-    Brawl: "0",
-    Heavy: "0",
-    Longarm: "0",
-    Melee: "0",
-    Pistol: "0",
-    Throw: "0",
+    Brawl: 0,
+    Heavy: 0,
+    Longarm: 0,
+    Melee: 0,
+    Pistol: 0,
+    Throw: 0,
   },
   mode: "Roll",
   armor: "0",
-  status: "None",
-  surprised: false,
-  helpless: false,
-  maxCover: "Half",
-  concealment: "None",
-  hiding: false,
-  morale: "5",
+  woundState: "0",
+  maxCover: "2",
+  concealment: "0",
+  morale: 5,
+  awe: 0,
+  conditions: {},
+  gifts: {},
+  activeGifts: {},
 };

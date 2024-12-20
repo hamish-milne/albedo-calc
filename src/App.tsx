@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import "./App.css";
 import { ThemeProvider } from "./components/theme-provider";
@@ -29,8 +30,6 @@ import {
   useForm,
   type FieldValues,
   type Path,
-  type RegisterOptions,
-  type UseFormRegisterReturn,
   type UseFormReturn,
 } from "react-hook-form";
 import { Input } from "./components/ui/input";
@@ -38,9 +37,14 @@ import {
   applyResult,
   attackResolve,
   attackSetup,
+  CoverNames,
   damageResolve,
   DefaultArmor,
   DefaultWeapons,
+  Range,
+  RangeNames,
+  WoundState,
+  WoundStateNames,
   type AttackResult,
 } from "./rules";
 import {
@@ -64,8 +68,6 @@ import {
   SelectForm,
   DefaultChar,
   type Character,
-  Range,
-  Status,
 } from "./schema";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
@@ -141,22 +143,14 @@ const Checkbox2 = React.forwardRef<
 });
 Checkbox2.displayName = "Checkbox";
 
-function RadioGroup<TFieldValues extends FieldValues, TOption = string>(props: {
-  form: UseFormReturn<TFieldValues>;
-  name: Path<TFieldValues>;
-  registerOpts?: RegisterOptions<TFieldValues>;
+function ToggleGroup<TOption = string>(props: {
   options: TOption[];
-  render: (
-    this: void,
-    field: UseFormRegisterReturn,
-    value: TOption,
-    idx: number
-  ) => JSX.Element;
+  render: (this: void, value: TOption, idx: number) => JSX.Element;
 }) {
-  const { form, name, registerOpts, options, render } = props;
+  const { options, render } = props;
   return (
     <div className="flex items-center justify-center gap-1">
-      {options.map((x, i) => render(form.register(name, registerOpts), x, i))}
+      {options.map((x, i) => render(x, i))}
     </div>
   );
 }
@@ -193,15 +187,16 @@ interface RadioButtonProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
     VariantProps<typeof radioVariants> {
   label: string;
+  type: "single" | "multiple";
 }
 
 const RadioButton = React.forwardRef<HTMLInputElement, RadioButtonProps>(
-  ({ className, variant, size, label, ...props }, ref) => {
+  ({ className, variant, size, label, type, ...props }, ref) => {
     return (
       <FormItem className="flex-1 flex flex-row items-center gap-0">
         <FormControl>
           <input
-            type="radio"
+            type={type === "single" ? "radio" : "checkbox"}
             className={cn(
               radioVariants({ variant, size, className }),
               "appearance-none w-full cursor-pointer"
@@ -219,96 +214,76 @@ const RadioButton = React.forwardRef<HTMLInputElement, RadioButtonProps>(
 );
 RadioButton.displayName = "RadioButton";
 
-function EnumField2<TFieldValues extends FieldValues>(props: {
-  form: UseFormReturn<TFieldValues>;
-  label: string;
-  type: ZodEnum<[string, ...string[]]>;
-  name: Path<TFieldValues>;
-}) {
-  const { form, label, type, name } = props;
-  return (
-    <FormField
-      control={form.control}
-      name={name}
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>{label}</FormLabel>
-          <FormControl>
-            <Select {...field} onValueChange={field.onChange}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {type.options.map((x) => (
-                  <SelectItem key={x} value={x}>
-                    {x}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormControl>
-        </FormItem>
-      )}
-    />
-  );
+function enumValues(length: number): string[] {
+  const ret: string[] = [];
+  for (let i = 0; i < length; i++) {
+    ret.push(String(i));
+  }
+  return ret;
 }
 
 function EnumField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
-  type: ZodEnum<[string, ...string[]]>;
   name: Path<TFieldValues>;
   label: string;
+  optionValues?: string[];
   optionNames?: string[];
 }) {
-  const { form, type, name, label, optionNames } = props;
+  const { form, name, label, optionValues, optionNames } = props;
 
   return (
     <FormFieldContext.Provider value={{ name }}>
       <fieldset>
         <div className="flex flex-col gap-2">
           <FormLegend>{label}</FormLegend>
-          <RadioGroup
-            form={form}
-            name={name}
-            options={type.options}
-            render={(field, value, idx) => (
+          <ToggleGroup
+            options={optionValues ?? enumValues(optionNames?.length || 0)}
+            render={(value, idx) => (
               <RadioButton
                 key={value}
-                {...field}
+                type="single"
+                {...form.register(name)}
                 value={value}
                 label={optionNames?.[idx] || value}
               />
             )}
           />
+          <FormMessage />
         </div>
       </fieldset>
     </FormFieldContext.Provider>
   );
+}
 
-  // return (
-  //   <FormField
-  //     control={form.control}
-  //     name={name}
-  //     render={({ field }) => (
-  //       <FormItem>
-  //         <FormLabel>{label}</FormLabel>
-  //         <FormControl>
-  //           <ToggleGroup
-  //             type="single"
-  //             {...field}
-  //             onValueChange={field.onChange}
-  //           >
-  //             {type.options.map((x, i) => (
-  //               <ToggleGroupItem key={x} className="flex-1" value={x}>
-  //                 {optionNames?.[i] ?? x}
-  //               </ToggleGroupItem>
-  //             ))}
-  //           </ToggleGroup>
-  //         </FormControl>
-  //       </FormItem>
-  //     )}
-  //   />
-  // );
+function FlagsField<TFieldValues extends FieldValues>(props: {
+  form: UseFormReturn<TFieldValues>;
+  name: Path<TFieldValues>;
+  label: string;
+  type: ZodObject<ZodRawShape>;
+}) {
+  const { form, name, label, type } = props;
+
+  return (
+    <FormFieldContext.Provider value={{ name }}>
+      <fieldset>
+        <div className="flex flex-col gap-2">
+          <FormLegend>{label}</FormLegend>
+          <ToggleGroup
+            options={Object.keys(type.shape)}
+            render={(value) => (
+              <RadioButton
+                key={value}
+                type="multiple"
+                {...form.register(`${name}.${value}` as Path<TFieldValues>)}
+                label={type.shape[value].description || value}
+              />
+            )}
+          />
+          <FormMessage />
+        </div>
+      </fieldset>
+    </FormFieldContext.Provider>
+  );
 }
 
 function RefField<TFieldValues extends FieldValues>(props: {
@@ -351,29 +326,6 @@ function BoolField<TFieldValues extends FieldValues>(props: {
   label: string;
 }) {
   const { form, name, label } = props;
-  // return (
-  //   <FormField
-  //     control={form.control}
-  //     name={name}
-  //     render={({ field }) => (
-  //       <FormItem className="gap-2">
-  //         <div className="flex flex-row justify-between">
-  //           <FormLabel>{label}</FormLabel>
-  //           <FormControl>
-  //             <Checkbox
-  //               ref={field.ref}
-  //               disabled={field.disabled}
-  //               onBlur={field.onBlur}
-  //               checked={field.value}
-  //               onCheckedChange={(x) => field.onChange(x === true)}
-  //             />
-  //           </FormControl>
-  //         </div>
-  //         <Separator />
-  //       </FormItem>
-  //     )}
-  //   />
-  // );
   return (
     <FormItem className="gap-2">
       <div className="flex flex-row justify-between">
@@ -381,6 +333,7 @@ function BoolField<TFieldValues extends FieldValues>(props: {
         <FormControl>
           <Checkbox2 {...form.register(name)} />
         </FormControl>
+        <FormMessage />
       </div>
     </FormItem>
   );
@@ -397,7 +350,14 @@ function AnyField<TFieldValues extends FieldValues>(props: {
     return <NumberField form={form} name={name} label={label} />;
   }
   if (type instanceof ZodEnum) {
-    return <EnumField form={form} type={type} name={name} label={label} />;
+    return (
+      <EnumField
+        form={form}
+        optionValues={type.options}
+        name={name}
+        label={label}
+      />
+    );
   }
   if (type instanceof ZodString) {
     return <StringField form={form} name={name} label={label} />;
@@ -498,6 +458,15 @@ function CharacterForm(props: { form: UseFormReturn<any>; prefix: string }) {
             render={(key, props) => <AnyField key={key} {...props} />}
           />
         );
+      case "woundState":
+        return <EnumField key={key} {...props} optionNames={WoundStateNames} />;
+      case "maxCover":
+      case "concealment":
+        return <EnumField key={key} {...props} optionNames={CoverNames} />;
+      case "conditions":
+      case "gifts":
+      case "activeGifts":
+        return <FlagsField key={key} {...props} type={props.type as any} />;
       default:
         return <AnyField key={key} {...props} />;
     }
@@ -550,8 +519,6 @@ function ArmorForm(props: { form: UseFormReturn<any>; prefix: string }) {
 
 type ListSelect<T> = { list: T[]; idx: number };
 
-let i = 0;
-
 function ObjectEditor(props: {
   form: UseFormReturn<any>;
   prefix: string;
@@ -573,7 +540,7 @@ function ObjectEditor(props: {
     const newIdx = list.length;
     form.setValue(`${prefix}.list.${newIdx}`, {
       ...DefaultChar,
-      name: `Random ${(i += 1)}`,
+      name: `New Character ${list.length}`,
     });
     setIdx(newIdx);
   }
@@ -642,16 +609,7 @@ function DiceGroup(props: {
   label: string;
 }) {
   const { form, dice, prefix, label } = props;
-  // const result = form.watch(prefix) as number[] | undefined;
-  // useEffect(() => {
-  //   if (!result || result.length != dice.length) {
-  //     form.setValue(
-  //       prefix,
-  //       (result || []).concat(Array(dice.length).fill(0)).slice(dice.length)
-  //     );
-  //     form.reset(undefined, { keepValues: true });
-  //   }
-  // }, [dice.length, form, prefix]);
+
   if (dice.length === 0) {
     return <></>;
   }
@@ -686,14 +644,6 @@ function DiceGroup(props: {
   );
 }
 
-const rangeName = {
-  C: "Close",
-  S: "Short",
-  M: "Medium",
-  L: "Long",
-  X: "Extreme",
-};
-
 function CombatSetup(props: {
   attacker: Character;
   defender: Character;
@@ -715,7 +665,10 @@ function CombatSetup(props: {
           typeof result.attackDice === "number"
             ? result.attackDice
             : toHit.data.attackRoll.slice(0, result.attackDice.length),
-        defenseRoll: toHit.data.defenseRoll.slice(0, result.defenseDice.length),
+        defenseRoll:
+          typeof result.defenseDice === "string"
+            ? []
+            : toHit.data.defenseRoll.slice(0, result.defenseDice.length),
       }
     : undefined;
 
@@ -724,11 +677,11 @@ function CombatSetup(props: {
       <p>
         <b>{result.attacker.name}</b> will attack <b>{result.defender.name}</b>{" "}
         with <b>{result.attacker.weapon.name}</b> at{" "}
-        <b>{rangeName[result.range]}</b> range.
+        <b>{RangeNames[result.range]}</b> range.
       </p>
       {typeof result.attackDice === "number" ? (
         <p>
-          Attacker will rote for <b>{result.attackDice}</b>
+          Attacker will rote for <b>{result.attackDice}.</b>
         </p>
       ) : (
         <DiceGroup
@@ -738,13 +691,22 @@ function CombatSetup(props: {
           dice={result.attackDice}
         />
       )}
-      <DiceGroup
-        form={form}
-        prefix="toHit.defenseRoll"
-        label="Defense dice"
-        dice={result.defenseDice}
-      />
-
+      {result.defenseDice === "Hit" ? (
+        <p>
+          <i>{result.defender.name}</i> can't defend against that!
+        </p>
+      ) : result.defenseDice === "Miss" ? (
+        <p>
+          <i>{result.defender.name}</i> can't be hit.
+        </p>
+      ) : (
+        <DiceGroup
+          form={form}
+          prefix="toHit.defenseRoll"
+          label="Defense dice"
+          dice={result.defenseDice}
+        />
+      )}
       {toHitFixed ? (
         <CombatResolve
           form={form}
@@ -809,6 +771,14 @@ function CombatResolve(props: {
   );
 }
 
+const woundStateChange = [
+  "no injury",
+  "a wounding hit",
+  "a crippling hit",
+  "an incapacitating hit",
+  "a devastating hit",
+];
+
 function DamageResolve(props: {
   form: UseFormReturn<SelectForm>;
   addItem: (this: void, item: LogItem) => void;
@@ -826,14 +796,12 @@ function DamageResolve(props: {
 
   const defenderIdx = form.watch(`setup.defender`);
 
-  console.log(form.getValues());
-
   function apply() {
     const toSet = applyResult(result);
     for (const [key, value] of Object.entries(toSet)) {
       form.setValue(
         `character.list.${defenderIdx as number}.${key as keyof CharacterRecord}`,
-        value
+        String(value)
       );
     }
     const names = [
@@ -850,14 +818,19 @@ function DamageResolve(props: {
       keepValues: true,
     });
     addItem({
-      ...result,
+      range: result.range,
+      totalDamage: result.totalDamage,
+      awe: result.awe,
+      damageRoll: result.damageRoll,
+      injury: result.injury,
+      result: result.result,
       attacker: props.attacker.name,
       defender: props.defender.name,
       weapon: props.attacker.weapon.name,
       attackRoll: props.attackRoll,
       defenseRoll: props.defenseRoll,
       newStatus:
-        props.defender.status === result.newStatus
+        props.defender.woundState <= result.newStatus
           ? undefined
           : result.newStatus,
     });
@@ -866,8 +839,8 @@ function DamageResolve(props: {
   return (
     <>
       <p>
-        After an attack of <b>{totalDamage}</b>, {defender.name} goes from{" "}
-        {defender.status} to <b>{newStatus}</b>, taking <b>{injury}</b> injuries
+        After an attack of <b>{totalDamage}</b>, {defender.name} suffers{" "}
+        <b>{woundStateChange[newStatus]}</b>, taking <b>{injury}</b> injuries
         and <b>{awe}</b> awe.
       </p>
       <Button onClick={apply}>Apply result</Button>
@@ -922,7 +895,7 @@ interface LogItem {
   result: AttackResult;
   damageRoll: number[];
   totalDamage: number;
-  newStatus: Status | undefined;
+  newStatus: WoundState | undefined;
   injury: number;
   awe: number;
 }
@@ -944,7 +917,7 @@ function LogItem({
   return (
     <p>
       <b>{attacker}</b> attacked <b>{defender}</b> with <b>{weapon}</b>, at{" "}
-      <b>{rangeName[range]}</b> range,{" "}
+      <b>{Range[range]}</b> range,{" "}
       {typeof attackRoll === "number" ? (
         <>
           roting for <b>{attackRoll}</b>
@@ -999,7 +972,7 @@ function CombatLog(props: {
     <Table>
       <TableBody>
         {items.map((item, idx) => (
-          <TableRow>
+          <TableRow key={idx}>
             <TableCell>
               <LogItem {...item} />
             </TableCell>
@@ -1020,7 +993,6 @@ function CombatLog(props: {
 }
 
 function Main() {
-  // console.log("render");
   const form = useForm<SelectForm>({
     mode: "onBlur",
     resolver: zodResolver(SelectForm),
@@ -1064,13 +1036,6 @@ function Main() {
     );
     return () => subscription.unsubscribe();
   }, [form]);
-
-  // try {
-  //   SelectForm.parse(form.getValues());
-  // } catch (e) {
-  //   console.log(e);
-  //   console.log(form.formState.errors);
-  // }
 
   const defaultOpen = useMemo(() => {
     const data = localStorage.getItem("open");

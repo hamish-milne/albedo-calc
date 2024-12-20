@@ -1,22 +1,46 @@
-import {
-  type Character,
-  Weapon,
-  type Armor,
-  Status,
-  Cover,
-  Range,
-  Skill,
-} from "./schema";
+import { type Character, Weapon, type Armor, Skill } from "./schema";
 
-function getRange(params: { attacker: Character; distance: number }) {
+export enum WoundState {
+  Uninjured = 0,
+  Wounded = 1,
+  Crippled = 2,
+  Incapacitated = 3,
+  Devastated = 4,
+}
+export const WoundStateNames = Object.keys(WoundState).filter((x) =>
+  isNaN(Number(x))
+);
+
+export enum Range {
+  Close = 0,
+  Short = 1,
+  Medium = 2,
+  Long = 3,
+  Extreme = 4,
+  Over = 5,
+}
+export const RangeNames = Object.keys(Range).filter((x) => isNaN(Number(x)));
+
+export enum Cover {
+  None = 0,
+  Quarter = 1,
+  Half = 2,
+  ThreeQuarter = 3,
+  Total = 4,
+}
+export const CoverNames = Object.keys(Cover).filter((x) => isNaN(Number(x)));
+
+function getRange(params: { attacker: Character; distance: number }): Range {
   const { attacker, distance } = params;
   const { ranges } = attacker.weapon;
-  for (const r of Weapon.shape.ranges.keySchema.options) {
-    if (ranges[r] && distance <= ranges[r]) {
-      return r;
+  const names = Weapon.shape.ranges.keySchema.options;
+  for (let i = 0; i < names.length; i++) {
+    const range = ranges[names[i]];
+    if (range && distance <= range) {
+      return i;
     }
   }
-  return undefined;
+  return Range.Over;
 }
 
 export type AttackResult = "Miss" | "Tie" | "Hit" | "Crit";
@@ -55,54 +79,103 @@ function getAttackDice(params: { attacker: Character }): number[] | number {
   }
 }
 
-const coverToDie: Record<Cover, number> = {
-  None: 4,
-  Quarter: 6,
-  Half: 8,
-  ThreeQuarter: 10,
-};
+function coverToDie(cover: Cover): number[] | undefined {
+  switch (cover) {
+    case Cover.None:
+      return [];
+    case Cover.Quarter:
+      return [8];
+    case Cover.Half:
+      return [10];
+    case Cover.ThreeQuarter:
+      return [12];
+    case Cover.Total:
+      return undefined;
+  }
+}
 
-const rangeToDie: Record<Range, number> = {
-  C: 4,
-  S: 6,
-  M: 8,
-  L: 10,
-  X: 12,
-};
+function concealmentToDie(concealment: Cover): number[] {
+  switch (concealment) {
+    case Cover.None:
+      return [];
+    case Cover.Quarter:
+      return [8];
+    case Cover.Half:
+      return [10];
+    case Cover.ThreeQuarter:
+      return [12];
+    case Cover.Total:
+      return [12, 12];
+  }
+}
+
+function rangeToDie(range: Range): number | undefined {
+  switch (range) {
+    case Range.Close:
+      return 4;
+    case Range.Short:
+      return 6;
+    case Range.Medium:
+      return 8;
+    case Range.Long:
+      return 10;
+    case Range.Extreme:
+      return 12;
+    case Range.Over:
+      return undefined;
+  }
+}
 
 const maxCoverForWeapon: Record<Skill, Cover> = {
-  Brawl: "None",
-  Melee: "None",
-  Pistol: "ThreeQuarter",
-  Throw: "Half",
-  Longarm: "Half",
-  Heavy: "Half",
+  Brawl: Cover.None,
+  Melee: Cover.None,
+  Pistol: Cover.ThreeQuarter,
+  Throw: Cover.Half,
+  Longarm: Cover.Half,
+  Heavy: Cover.Half,
 };
 
 function getDefenseDice(params: {
+  attacker: Character;
   defender: Character;
-  range: Range | undefined;
-}): number[] {
-  const { defender, range } = params;
-  if (!range) {
-    return [];
+  range: Range;
+  attackDice: number | number[];
+}): "Hit" | "Miss" | number[] {
+  const { attacker, defender, range, attackDice } = params;
+  const inMelee = attacker.weapon.action === "Melee" && range === Range.Close;
+  let cover: Cover;
+  if (defender.conditions.hiding) {
+    cover = defender.maxCover;
+  } else if (inMelee) {
+    cover = defender.weapon.skill === "Melee" ? Cover.Quarter : Cover.None;
+  } else {
+    cover = Math.min(
+      maxCoverForWeapon[defender.weapon.skill],
+      defender.maxCover
+    );
   }
-  const rangeDie = rangeToDie[range];
-  const maxCover = coverToDie[defender.maxCover];
-  const maxWeaponCover = coverToDie[maxCoverForWeapon[defender.weapon.skill]];
-  const finalCover = defender.hiding
-    ? maxCover
-    : Math.min(maxCover, maxWeaponCover);
-  const concealment = coverToDie[defender.concealment];
-  const finalConcealment = Math.max(finalCover, concealment);
-  return [rangeDie, finalCover, finalConcealment];
+  const concealment = inMelee
+    ? defender.concealment
+    : Math.max(cover, defender.concealment);
+  const rangeDie = rangeToDie(params.range);
+  const coverDie = coverToDie(cover);
+  const concealmentDie = concealmentToDie(concealment);
+  if (!rangeDie || !coverDie) {
+    return "Miss";
+  }
+  const dice = [rangeDie, ...coverDie, ...concealmentDie];
+  if (typeof attackDice === "number" && !dice.some((x) => x >= attackDice)) {
+    return "Hit";
+  }
+  return dice;
 }
 
 function getResult(params: {
+  attacker: Character;
   attackRoll: number | number[];
   defenseRoll: number[];
 }): AttackResult {
-  const { attackRoll, defenseRoll } = params;
+  const { attacker, attackRoll, defenseRoll } = params;
   const atk =
     typeof attackRoll === "number" ? attackRoll : Math.max(...attackRoll);
   const def = Math.max(...defenseRoll);
@@ -110,6 +183,12 @@ function getResult(params: {
     return "Miss";
   }
   if (atk === def) {
+    if (
+      attacker.gifts.semiAutoExpert &&
+      ["Semi", "Full"].includes(attacker.weapon.action)
+    ) {
+      return "Hit";
+    }
     return "Tie";
   }
   if (
@@ -131,43 +210,24 @@ function getDamageDiceCount(params: {
   if (result === "Miss" || result === "Tie") {
     return 0;
   }
-  let total = 1;
-  switch (defender.status) {
-    case "None":
-      total += 0;
-      break;
-    case "Wounded":
-      total += 1;
-      break;
-    case "Crippled":
-      total += 2;
-      break;
-    case "Devastated":
-    case "Incapacitated":
-      total += 3;
-      break;
-  }
+  let total: number;
   if (attacker.weapon.shotgun) {
-    switch (range) {
-      case "C":
-        total += 3;
-        break;
-      case "S":
-        total += 2;
-        break;
-      case "M":
-        total += 1;
-        break;
-      case "L":
-        total += 0;
-        break;
-    }
+    total = 4 - range;
+  } else {
+    total = 1 + Math.min(3, defender.woundState);
   }
   if (result === "Crit") {
     total += 1;
   }
-  if (defender.helpless) {
+  if (defender.conditions.helpless) {
     total += 1;
+  }
+  if (attacker.weapon.action !== "Melee") {
+    if (attacker.activeGifts.sniperMaster) {
+      total += 3;
+    } else if (attacker.activeGifts.sniperExpert) {
+      total += 1;
+    }
   }
   return total;
 }
@@ -199,70 +259,60 @@ function getTotalDamage(params: {
   );
 }
 
+function getThresholds(defender: Character): [number, number, number, number] {
+  const t1 =
+    defender.armor.threshold +
+    defender.body * 2 +
+    (defender.gifts.veryTough ? 10 : defender.gifts.tough ? 5 : 0);
+  return [t1, t1 + 10, t1 + 20, t1 + 40];
+}
+
 function getNewStatus(params: {
   defender: Character;
   totalDamage: number;
-}): Status {
+}): WoundState {
   const { defender, totalDamage } = params;
-  const woundedThreshold = defender.armor.threshold + defender.body * 2;
-  if (totalDamage < woundedThreshold) {
-    return "None";
+  const thresholds = getThresholds(defender);
+  for (let i = 0; i < thresholds.length; i++) {
+    if (totalDamage < thresholds[i]) {
+      return i;
+    }
   }
-  if (totalDamage < woundedThreshold + 10) {
-    return "Wounded";
-  }
-  if (totalDamage < woundedThreshold + 20) {
-    return "Crippled";
-  }
-  if (totalDamage < woundedThreshold + 40) {
-    return "Incapacitated";
-  }
-  return "Devastated";
+  return thresholds.length;
 }
 
 function getAwe(params: {
   defender: Character;
   range: Range;
   result: AttackResult;
-  newStatus: Status;
+  newStatus: WoundState;
 }): number {
   const { defender, range, result, newStatus } = params;
   let total = 0;
-  if (defender.surprised || defender.helpless) {
+  if (defender.conditions.surprised || defender.conditions.helpless) {
     total += 1;
   }
-  if (range === "C") {
+  if (range === Range.Close) {
     total += 1;
   }
   if (result === "Hit" || result === "Crit") {
     total += 1;
   }
-  switch (newStatus) {
-    case "Wounded":
-      total += 1;
-      break;
-    case "Crippled":
-      total += 2;
-      break;
-    case "Incapacitated":
-    case "Devastated":
-      total += 3;
-      break;
-  }
+  total += Math.min(3, newStatus);
   return total;
 }
 
-function getInjury(params: { defender: Character; newStatus: Status }) {
+function getInjury(params: { defender: Character; newStatus: WoundState }) {
   switch (params.newStatus) {
-    case "None":
+    case WoundState.Uninjured:
       return 0;
-    case "Wounded":
+    case WoundState.Wounded:
       return 1;
-    case "Crippled":
+    case WoundState.Crippled:
       return 3;
-    case "Incapacitated":
+    case WoundState.Incapacitated:
       return 5;
-    case "Devastated":
+    case WoundState.Devastated:
       return params.defender.body;
   }
 }
@@ -324,23 +374,16 @@ export function damageResolve(params: {
 
 export function applyResult(params: {
   defender: Character;
-  newStatus: Status;
+  newStatus: WoundState;
   injury: number;
   awe: number;
 }) {
   const { defender, newStatus, awe, injury } = params;
 
-  const statusOrder = Status.options;
   return {
-    morale: Math.max(defender.morale - awe, 0),
-    status:
-      statusOrder[
-        Math.max(
-          statusOrder.indexOf(defender.status),
-          statusOrder.indexOf(newStatus)
-        )
-      ],
-    body: Math.max(defender.body - injury, 0),
+    woundState: Math.max(defender.woundState, newStatus),
+    injury: Math.min(defender.body, defender.injury + injury),
+    awe: Math.min(defender.morale, defender.awe + awe),
   };
 }
 
