@@ -1154,7 +1154,8 @@ function Main() {
 function App() {
   return (
     <ThemeProvider defaultTheme="dark">
-      <div className="max-w-xl flex flex-col gap-3">
+      <div className="max-w-xl flex flex-col gap-3 m-auto">
+        <h1 className="text-2xl">Hamish's Albedo Combat Calculator</h1>
         <Main />
       </div>
     </ThemeProvider>
