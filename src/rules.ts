@@ -85,7 +85,8 @@ function getAttackDice(params: { attacker: Character }): number[] | number {
 }
 
 function coverToDie(cover: Cover): number[] | undefined {
-  switch (cover) {
+  switch (Number(cover)) {
+    default:
     case Cover.None:
       return [];
     case Cover.Quarter:
@@ -100,7 +101,8 @@ function coverToDie(cover: Cover): number[] | undefined {
 }
 
 function concealmentToDie(concealment: Cover): number[] {
-  switch (concealment) {
+  switch (Number(concealment)) {
+    default:
     case Cover.None:
       return [];
     case Cover.Quarter:
