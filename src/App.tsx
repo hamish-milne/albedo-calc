@@ -104,7 +104,7 @@ function NumberField<TFieldValues extends FieldValues>(props: {
       <FormItem className={className}>
         <FormLabel>{label}</FormLabel>
         <FormControl>
-          <Input {...form.register(name, { valueAsNumber: true })} />
+          <Input {...form.register(name)} />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -605,15 +605,16 @@ function getCharacter(form: UseFormReturn<SelectForm>, idx: number): Character {
 }
 
 function trySetupCombat(form: UseFormReturn<SelectForm>) {
+  const s = form.watch("setup");
   try {
-    const inProgress = SetupSchema.validateSync(form.watch("setup"));
+    const inProgress = SetupSchema.validateSync(s);
     return {
       attacker: getCharacter(form, inProgress.attacker),
       defender: getCharacter(form, inProgress.defender),
       distance: inProgress.distance,
     };
-  } catch (_) {
-    return;
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
   }
 }
 
@@ -683,7 +684,7 @@ function CombatSetup(props: {
   const { form, addItem } = props;
   const result = attackSetup(props);
 
-  if (!result.range) {
+  if (result.range >= Range.Over) {
     return <p>Out of range!</p>;
   }
 
@@ -906,12 +907,10 @@ function CombatForm(props: {
       />
       <NumberField form={form} label="Distance" name="setup.distance" />
 
-      {setup ? (
+      {typeof setup === "object" ? (
         <CombatSetup {...setup} form={form} addItem={addItem} />
       ) : (
-        <p className="text-[0.8rem] font-medium text-destructive">
-          Unable to start combat due to form errors
-        </p>
+        <p className="text-[0.8rem] font-medium text-destructive">{setup}</p>
       )}
     </div>
   );

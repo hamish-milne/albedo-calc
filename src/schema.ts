@@ -1,7 +1,11 @@
 import * as yup from "yup";
 
 const nameType = yup.string().required().min(1);
-const integer = yup.number().min(0).integer();
+const integer = yup
+  .number()
+  .transform((x) => (isNaN(x) ? undefined : x))
+  .min(0)
+  .integer();
 
 const selectValue = integer.required();
 const enumValue = yup.mixed((_x): _x is number => true).required();
@@ -74,12 +78,14 @@ export const CharacterRecord = yup.object({
   concealment: enumValue.label("Concealment in environment"),
   morale: integer.required().label("Morale"),
   awe: integer.label("Awe"),
-  conditions: yup.object({
-    surprised: bool.label("Surprised"),
-    helpless: bool.label("Helpless"),
-    hiding: bool.label("Hiding"),
-    aiming: bool.label("Aiming"),
-  }),
+  conditions: yup
+    .object({
+      surprised: bool.label("Surprised"),
+      helpless: bool.label("Helpless"),
+      hiding: bool.label("Hiding"),
+      aiming: bool.label("Aiming"),
+    })
+    .label("Conditions"),
   gifts: yup
     .object({
       tough: bool.label("Tough"),

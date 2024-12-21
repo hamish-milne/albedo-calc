@@ -150,7 +150,8 @@ function getDefenseDice(params: {
   range: Range;
   attackDice: string | number | number[];
 }): "Hit" | "Miss" | number[] {
-  const { attacker, defender, range, attackDice } = params;
+  const { attacker, defender, attackDice } = params;
+  let range = params.range;
   if (typeof attackDice === "string") {
     return "Miss";
   }
@@ -166,9 +167,20 @@ function getDefenseDice(params: {
       defender.maxCover
     );
   }
-  const concealment = inMelee
+  let concealment = inMelee
     ? defender.concealment
     : Math.max(cover, defender.concealment);
+
+  if (
+    attacker.conditions.aiming &&
+    attacker.weapon.action !== "Melee" &&
+    concealment < Cover.Total
+  ) {
+    concealment = Math.max(0, concealment - 1);
+    cover = Math.max(0, cover - 1);
+    range = Math.max(0, range - 1);
+  }
+
   const rangeDie = rangeToDie(params.range);
   const coverDie = coverToDie(cover);
   const concealmentDie = concealmentToDie(concealment);
