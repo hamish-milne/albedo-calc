@@ -712,6 +712,8 @@ function CombatSetup(props: {
         <p>
           Attacker will rote for <b>{result.attackDice}.</b>
         </p>
+      ) : typeof result.attackDice === "string" ? (
+        <p className="text-destructive">{result.attackDice}</p>
       ) : (
         <DiceGroup
           form={form}
@@ -760,6 +762,7 @@ function CombatResolve(props: {
   defender: Character;
   attackRoll: number | number[];
   defenseRoll: number[];
+  defenseDice: AttackResult | number[];
   range: Range;
 }) {
   const { form, addItem } = props;

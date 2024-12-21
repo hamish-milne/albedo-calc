@@ -67,20 +67,22 @@ function two(x: number) {
   return y ? [y, y] : [];
 }
 
-function getAttackDice(params: { attacker: Character }): number[] | number {
+function getAttackDice(params: {
+  attacker: Character;
+}): number[] | number | string {
   const { attacker } = params;
   const marks = Math.min(attacker.marks[attacker.weapon.skill] || 0, 8);
   switch (attacker.mode) {
     case "Rote":
       return marks + 1;
     case "Roll":
-      return one(marks);
+      return marks ? one(marks) : "Skill too low to Roll";
     case "Push":
-      return two(marks);
+      return marks ? two(marks) : "Skill too low to Push";
     case "Risk":
-      return one(marks + 1);
+      return marks < 5 ? one(marks + 1) : "Skill too high to Risk";
     case "Breeze":
-      return two(marks / 2);
+      return marks > 2 ? two(marks / 2) : "Skill too low to Breeze";
   }
 }
 
@@ -146,9 +148,12 @@ function getDefenseDice(params: {
   attacker: Character;
   defender: Character;
   range: Range;
-  attackDice: number | number[];
+  attackDice: string | number | number[];
 }): "Hit" | "Miss" | number[] {
   const { attacker, defender, range, attackDice } = params;
+  if (typeof attackDice === "string") {
+    return "Miss";
+  }
   const inMelee = attacker.weapon.action === "Melee" && range === Range.Close;
   let cover: Cover;
   if (defender.conditions.hiding) {
@@ -180,9 +185,13 @@ function getDefenseDice(params: {
 function getResult(params: {
   attacker: Character;
   attackRoll: number | number[];
+  defenseDice: AttackResult | number[];
   defenseRoll: number[];
 }): AttackResult {
-  const { attacker, attackRoll, defenseRoll } = params;
+  const { attacker, attackRoll, defenseDice, defenseRoll } = params;
+  if (typeof defenseDice === "string") {
+    return defenseDice;
+  }
   const atk =
     typeof attackRoll === "number" ? attackRoll : Math.max(...attackRoll);
   const def = Math.max(...defenseRoll);
@@ -345,6 +354,7 @@ export function attackResolve(params: {
   defender: Character;
   range: Range;
   attackRoll: number | number[];
+  defenseDice: AttackResult | number[];
   defenseRoll: number[];
 }) {
   const a = {
