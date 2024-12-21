@@ -1,141 +1,151 @@
-import { z, type ZodTypeAny } from "zod";
+import * as yup from "yup";
 
-const Integer = z
-  .string()
-  .or(z.number())
-  .pipe(z.coerce.number().min(0).step(1));
-export const BoolInput = z.string().optional();
-export const Bool = z.boolean().optional(); // BoolInput.transform((x) => x === true);
+const nameType = yup.string().required().min(1);
+const integer = yup.number().min(0).integer();
 
-export const Skill = z.enum([
-  "Brawl",
-  "Melee",
-  "Throw",
-  "Longarm",
-  "Pistol",
-  "Heavy",
-]);
-export type Skill = z.infer<typeof Skill>;
+const selectValue = integer.required();
+const enumValue = yup.mixed((_x): _x is number => true).required();
 
-export const Weapon = z
-  .strictObject({
-    name: z.string().min(1).describe("Weapon name"),
-    skill: Skill.describe("Weapon skill"),
-    action: z.enum(["Melee", "Single", "Semi", "Full"]).describe("Action"),
-    ranges: z
-      .record(z.enum(["C", "S", "M", "L", "X"]), Integer)
-      .describe("Ranges"),
-    baseDamage: Integer.describe("Base damage"),
-    penDamage: Integer.optional().describe("Penetration damage"),
-    shotgun: Bool.describe("Use shotgun damage dice"),
-    explosion: Integer.optional().describe("Explosion radius"),
+const Marks = yup
+  .object({
+    Brawl: integer,
+    Melee: integer,
+    Throw: integer,
+    Longarm: integer,
+    Pistol: integer,
+    Heavy: integer,
   })
-  .describe("Weapon");
-export type Weapon = z.infer<typeof Weapon>;
+  .label("Skills");
 
-export const Armor = z
-  .strictObject({
-    name: z.string().min(1).describe("Armor name"),
-    deflection: Integer.describe("Deflection"),
-    threshold: Integer.describe("Threshold modifier"),
-  })
-  .describe("Armor");
-export type Armor = z.infer<typeof Armor>;
+const Skill = Object.keys(Marks.fields) as Array<keyof typeof Marks.fields>;
+export type Skill = keyof typeof Marks.fields;
 
-const Cover = z
-  .string()
-  .or(z.number())
-  .pipe(z.coerce.number().int().nonnegative().max(4));
+const Ranges = yup.object({
+  C: integer,
+  S: integer,
+  M: integer,
+  L: integer,
+  X: integer,
+});
 
-export const CharacterRecord = z
-  .strictObject({
-    name: z.string().min(1).describe("Character name"),
-    body: Integer.describe("Body score"),
-    injury: Integer.describe("Injury"),
-    weapon: Integer.describe("Equipped weapon"),
-    marks: z.record(Weapon.shape.skill, Integer),
-    mode: z
-      .enum(["Rote", "Roll", "Push", "Risk", "Breeze"])
-      .describe("Attack mode"),
-    armor: Integer.describe("Equipped armor"),
-    woundState: Integer.describe("Wound state"),
-    maxCover: Cover.describe("Max cover in environment"),
-    concealment: Cover.describe("Concealment in environment"),
-    morale: Integer.describe("Morale"),
-    awe: Integer.describe("Awe"),
-    conditions: z
-      .object({
-        surprised: Bool.describe("Surprised"),
-        helpless: Bool.describe("Helpless"),
-        hiding: Bool.describe("Hiding"),
-        aiming: Bool.describe("Aiming"),
-      })
-      .describe("Conditions"),
-    gifts: z
-      .object({
-        tough: Bool.describe("Tough"),
-        veryTough: Bool.describe("Very Tough"),
-        strong: Bool.describe("Strong"),
-        veryStrong: Bool.describe("Very Strong"),
-        semiAutoExpert: Bool.describe("Semi-Auto Expert"),
-      })
-      .describe("Passive Gifts"),
-    activeGifts: z
-      .object({
-        sniperExpert: Bool.describe("Sniper Expert"),
-        sniperMaster: Bool.describe("Sniper Master"),
-        martialArts: Bool.describe("Martial Arts"),
-        meleeExpert: Bool.describe("Melee Expert"),
-      })
-      .pick({
-        sniperExpert: true,
-        sniperMaster: true,
-        martialArts: true,
-        meleeExpert: true,
-      })
-      .describe("Active Gifts"),
-  })
-  .describe("Character");
-export type CharacterRecord = z.infer<typeof CharacterRecord>;
+export const WeaponRangeNames = Object.keys(Ranges.fields) as Array<
+  keyof typeof Ranges.fields
+>;
+
+export const Weapon = yup.object({
+  name: nameType.label("Weapon name"),
+  skill: yup.string().required().oneOf(Skill).label("Weapon skill"),
+  action: yup
+    .string()
+    .required()
+    .oneOf(["Melee", "Single", "Semi", "Full"])
+    .label("Action"),
+  ranges: Ranges,
+  baseDamage: integer.required().label("Base damage"),
+  penDamage: integer.label("Penetration damage"),
+  shotgun: yup.boolean().label("Use shotgun damage dice"),
+  explosion: integer.label("Explosion radius"),
+});
+export type Weapon = yup.InferType<typeof Weapon>;
+
+export const Armor = yup.object({
+  name: nameType.label("Armor name"),
+  deflection: integer.required().label("Deflection"),
+  threshold: integer.required().label("Threshold modifier"),
+});
+export type Armor = yup.InferType<typeof Armor>;
+
+const bool = yup.bool();
+
+export const CharacterRecord = yup.object({
+  name: nameType.label("Character name"),
+  body: integer.required().label("Body score"),
+  injury: integer.label("Injury"),
+  weapon: selectValue.label("Equipped weapon"),
+  armor: selectValue.label("Equipped armor"),
+  marks: Marks,
+  mode: yup
+    .string()
+    .required()
+    .oneOf(["Rote", "Roll", "Push", "Risk", "Breeze"])
+    .label("Attack mode"),
+  woundState: enumValue.label("Wound state"),
+  maxCover: enumValue.label("Max cover in environment"),
+  concealment: enumValue.label("Concealment in environment"),
+  morale: integer.required().label("Morale"),
+  awe: integer.label("Awe"),
+  conditions: yup.object({
+    surprised: bool.label("Surprised"),
+    helpless: bool.label("Helpless"),
+    hiding: bool.label("Hiding"),
+    aiming: bool.label("Aiming"),
+  }),
+  gifts: yup
+    .object({
+      tough: bool.label("Tough"),
+      veryTough: bool.label("Very Tough"),
+      strong: bool.label("Strong"),
+      veryStrong: bool.label("Very Strong"),
+      semiAutoExpert: bool.label("Semi-Auto Expert"),
+    })
+    .label("Passive Gifts"),
+  activeGifts: yup
+    .object({
+      sniperExpert: bool.label("Sniper Expert"),
+      sniperMaster: bool.label("Sniper Master"),
+      martialArts: bool.label("Martial Arts"),
+      meleeExpert: bool.label("Melee Expert"),
+    })
+    .label("Active Gifts"),
+});
+export type CharacterRecord = yup.InferType<typeof CharacterRecord>;
 
 export type Character = Omit<CharacterRecord, "weapon" | "armor"> & {
   weapon: Weapon;
   armor: Armor;
 };
 
-export function ListSelect<T extends ZodTypeAny>(t: T) {
-  return z.strictObject({
-    list: z.array(t),
-    idx: Integer,
+export function ListSelect<C extends yup.Maybe<yup.AnyObject>, T = any>(
+  t: yup.ISchema<T, C>
+) {
+  return yup.object({
+    list: yup.array(t).required(),
+    idx: integer.required(),
   });
 }
 
-const DiceRoll = z.array(Integer);
+const DiceRoll = yup.array(integer.required()).required();
 
-export const SelectForm = z.strictObject({
+export const SetupSchema = yup.object({
+  attacker: integer.required().label("Attacker"),
+  defender: integer.required().label("Defender"),
+  distance: integer.required().label("Distance"),
+});
+
+export const ToHitSchema = yup.object({
+  attackRoll: DiceRoll.label("Attack roll"),
+  defenseRoll: DiceRoll.label("Defense roll"),
+});
+
+export const ResolveSchema = yup.object({
+  damageRoll: DiceRoll.label("Damage roll"),
+});
+
+export const SelectForm = yup.object({
   character: ListSelect(CharacterRecord),
   weapon: ListSelect(Weapon),
   armor: ListSelect(Armor),
-  setup: z.strictObject({
-    attacker: Integer.describe("Attacker"),
-    defender: Integer.describe("Defender"),
-    distance: Integer.describe("Distance"),
-  }),
-  toHit: z.strictObject({
-    attackRoll: DiceRoll.describe("Attack roll"),
-    defenseRoll: DiceRoll.describe("Defense roll"),
-  }),
-  resolve: z.strictObject({
-    damageRoll: DiceRoll.describe("Damage roll"),
-  }),
+  setup: SetupSchema,
+  toHit: ToHitSchema,
+  resolve: ResolveSchema,
 });
-export type SelectForm = z.input<typeof SelectForm>;
+export type SelectForm = yup.InferType<typeof SelectForm>;
 
-export const DefaultChar: z.input<typeof CharacterRecord> = {
+export const DefaultChar: CharacterRecord = {
   name: "Donut Steele",
   body: 7,
   injury: 0,
-  weapon: "0",
+  weapon: 0,
   marks: {
     Brawl: 0,
     Heavy: 0,
@@ -145,10 +155,10 @@ export const DefaultChar: z.input<typeof CharacterRecord> = {
     Throw: 0,
   },
   mode: "Roll",
-  armor: "0",
-  woundState: "0",
-  maxCover: "2",
-  concealment: "0",
+  armor: 0,
+  woundState: "0" as unknown as number,
+  maxCover: "2" as unknown as number,
+  concealment: "0" as unknown as number,
   morale: 5,
   awe: 0,
   conditions: {},

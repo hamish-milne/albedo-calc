@@ -1,4 +1,10 @@
-import { type Character, Weapon, type Armor, Skill } from "./schema";
+import {
+  type Character,
+  Weapon,
+  type Armor,
+  type Skill,
+  WeaponRangeNames,
+} from "./schema";
 
 export enum WoundState {
   Uninjured = 0,
@@ -33,9 +39,8 @@ export const CoverNames = Object.keys(Cover).filter((x) => isNaN(Number(x)));
 function getRange(params: { attacker: Character; distance: number }): Range {
   const { attacker, distance } = params;
   const { ranges } = attacker.weapon;
-  const names = Weapon.shape.ranges.keySchema.options;
-  for (let i = 0; i < names.length; i++) {
-    const range = ranges[names[i]];
+  for (let i = 0; i < WeaponRangeNames.length; i++) {
+    const range = ranges[WeaponRangeNames[i]];
     if (range && distance <= range) {
       return i;
     }
@@ -246,7 +251,7 @@ function getTotalDamage(params: {
   switch (weapon.skill) {
     case "Melee":
     case "Brawl":
-      penDamage = attacker.body;
+      penDamage = Math.max(0, attacker.body - (attacker.injury || 0));
       break;
     default:
       penDamage = weapon.penDamage || 0;
@@ -262,7 +267,7 @@ function getTotalDamage(params: {
 function getThresholds(defender: Character): [number, number, number, number] {
   const t1 =
     defender.armor.threshold +
-    defender.body * 2 +
+    Math.max(0, defender.body - (defender.injury || 0)) * 2 +
     (defender.gifts.veryTough ? 10 : defender.gifts.tough ? 5 : 0);
   return [t1, t1 + 10, t1 + 20, t1 + 40];
 }
@@ -382,8 +387,8 @@ export function applyResult(params: {
 
   return {
     woundState: Math.max(defender.woundState, newStatus),
-    injury: Math.min(defender.body, defender.injury + injury),
-    awe: Math.min(defender.morale, defender.awe + awe),
+    injury: Math.min(defender.body, (defender.injury || 0) + injury),
+    awe: Math.min(defender.morale, (defender.awe || 0) + awe),
   };
 }
 

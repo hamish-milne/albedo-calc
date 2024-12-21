@@ -12,20 +12,7 @@ import {
   FormLegend,
   FormMessage,
 } from "./components/ui/form";
-import {
-  ZodBoolean,
-  ZodEffects,
-  ZodEnum,
-  ZodNumber,
-  ZodObject,
-  ZodOptional,
-  ZodPipeline,
-  ZodRecord,
-  ZodString,
-  type ZodRawShape,
-  type ZodTypeAny,
-} from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { yupResolver } from "@hookform/resolvers/yup";
 import {
   useForm,
   type FieldValues,
@@ -60,14 +47,15 @@ import { cn } from "./lib/utils";
 import React, { useEffect, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 import {
-  BoolInput,
-  Bool,
   CharacterRecord,
   Weapon,
   Armor,
   SelectForm,
   DefaultChar,
   type Character,
+  ToHitSchema,
+  ResolveSchema,
+  SetupSchema,
 } from "./schema";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
@@ -77,6 +65,12 @@ import {
   AccordionTrigger,
 } from "./components/ui/accordion";
 import { Table, TableBody, TableCell, TableRow } from "./components/ui/table";
+import {
+  type InferType,
+  type Schema,
+  type SchemaFieldDescription,
+  type SchemaObjectDescription,
+} from "yup";
 
 function StringField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
@@ -110,7 +104,7 @@ function NumberField<TFieldValues extends FieldValues>(props: {
       <FormItem className={className}>
         <FormLabel>{label}</FormLabel>
         <FormControl>
-          <Input {...form.register(name)} />
+          <Input {...form.register(name, { valueAsNumber: true })} />
         </FormControl>
         <FormMessage />
       </FormItem>
@@ -259,7 +253,7 @@ function FlagsField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
   name: Path<TFieldValues>;
   label: string;
-  type: ZodObject<ZodRawShape>;
+  type: SchemaObjectDescription;
 }) {
   const { form, name, label, type } = props;
 
@@ -269,13 +263,13 @@ function FlagsField<TFieldValues extends FieldValues>(props: {
         <div className="flex flex-col gap-2">
           <FormLegend>{label}</FormLegend>
           <ToggleGroup
-            options={Object.keys(type.shape)}
+            options={Object.keys(type.fields)}
             render={(value) => (
               <RadioButton
                 key={value}
                 type="multiple"
                 {...form.register(`${name}.${value}` as Path<TFieldValues>)}
-                label={type.shape[value].description || value}
+                label={type.fields[value]?.label || value}
               />
             )}
           />
@@ -300,7 +294,12 @@ function RefField<TFieldValues extends FieldValues>(props: {
       render={({ field }) => (
         <FormItem>
           <FormLabel>{label}</FormLabel>
-          <Select {...field} onValueChange={field.onChange}>
+          <Select
+            disabled={field.disabled}
+            name={field.name}
+            value={String(field.value)}
+            onValueChange={(x) => field.onChange(Number(x))}
+          >
             <FormControl>
               <SelectTrigger>
                 <SelectValue />
@@ -341,57 +340,48 @@ function BoolField<TFieldValues extends FieldValues>(props: {
 
 function AnyField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
-  type: ZodTypeAny;
+  type: SchemaFieldDescription;
   name: Path<TFieldValues>;
   label: string;
 }) {
   const { form, type, name, label } = props;
-  if (type instanceof ZodNumber) {
+  if (type.type === "number") {
     return <NumberField form={form} name={name} label={label} />;
   }
-  if (type instanceof ZodEnum) {
+  if (type.oneOf && type.oneOf.length > 0) {
     return (
       <EnumField
         form={form}
-        optionValues={type.options}
+        optionValues={type.oneOf as string[]}
         name={name}
         label={label}
       />
     );
   }
-  if (type instanceof ZodString) {
+  if (type.type === "string") {
     return <StringField form={form} name={name} label={label} />;
   }
-  if (type === BoolInput || type === Bool || type instanceof ZodBoolean) {
+  if (type.type === "boolean") {
     return <BoolField form={form} name={name} label={label} />;
-  }
-  if (type instanceof ZodEffects) {
-    return AnyField({ ...props, type: type.innerType() });
-  }
-  if (type instanceof ZodOptional) {
-    return AnyField({ ...props, type: type.unwrap() });
-  }
-  if (type instanceof ZodPipeline) {
-    return AnyField({ ...props, type: type._def.out });
   }
   throw Error(`Unknown type: ${Object.getPrototypeOf(type).constructor.name}`);
 }
 
 function RecordField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
-  type: ZodRecord<ZodEnum<[string, ...string[]]>>;
+  type: SchemaObjectDescription;
   name: Path<TFieldValues>;
   render: (this: void, field: string, props: AnyFieldProps) => JSX.Element;
 }) {
   const { form, type, name, render } = props;
   return (
     <div className="flex gap-2">
-      {type.keySchema.options.map((x) =>
+      {Object.keys(type.fields).map((x) =>
         render(x, {
           form,
           name: `${name}.${x}`,
           label: x,
-          type: type.valueSchema,
+          type: type.fields[x],
         })
       )}
     </div>
@@ -402,12 +392,12 @@ type AnyFieldProps = {
   form: UseFormReturn<any>;
   name: string;
   label: string;
-  type: ZodTypeAny;
+  type: SchemaFieldDescription;
 };
 
 function AnyForm(props: {
   form: UseFormReturn<FieldValues>;
-  type: ZodObject<ZodRawShape>;
+  type: SchemaObjectDescription;
   prefix?: string;
   render: (this: void, field: string, props: AnyFieldProps) => JSX.Element;
 }) {
@@ -415,14 +405,18 @@ function AnyForm(props: {
   const fullPrefix = prefix ? `${prefix}.` : "";
   return (
     <div className="flex gap-4 flex-col">
-      {(Object.entries(type.shape) as [Path<FieldValues>, ZodTypeAny][]).map(
-        ([name, type]) =>
-          render(name, {
-            form,
-            type,
-            name: fullPrefix + name,
-            label: type.description || name,
-          })
+      {(
+        Object.entries(type.fields) as [
+          Path<FieldValues>,
+          SchemaFieldDescription,
+        ][]
+      ).map(([name, type]) =>
+        render(name, {
+          form,
+          type,
+          name: fullPrefix + name,
+          label: type.label || name,
+        })
       )}
     </div>
   );
@@ -475,7 +469,7 @@ function CharacterForm(props: { form: UseFormReturn<any>; prefix: string }) {
   return (
     <AnyForm
       form={form}
-      type={CharacterRecord}
+      type={CharacterRecord.describe()}
       prefix={prefix}
       render={render}
     />
@@ -501,7 +495,14 @@ function WeaponForm(props: { form: UseFormReturn<any>; prefix: string }) {
     }
   }
 
-  return <AnyForm form={form} type={Weapon} prefix={prefix} render={render} />;
+  return (
+    <AnyForm
+      form={form}
+      type={Weapon.describe()}
+      prefix={prefix}
+      render={render}
+    />
+  );
 }
 
 function ArmorForm(props: { form: UseFormReturn<any>; prefix: string }) {
@@ -514,7 +515,14 @@ function ArmorForm(props: { form: UseFormReturn<any>; prefix: string }) {
     }
   }
 
-  return <AnyForm form={form} type={Armor} prefix={prefix} render={render} />;
+  return (
+    <AnyForm
+      form={form}
+      type={Armor.describe()}
+      prefix={prefix}
+      render={render}
+    />
+  );
 }
 
 type ListSelect<T> = { list: T[]; idx: number };
@@ -555,7 +563,8 @@ function ObjectEditor(props: {
             <FormItem className="flex-1">
               <FormControl>
                 <Select
-                  {...field}
+                  disabled={field.disabled}
+                  name={field.name}
                   value={String(field.value)}
                   onValueChange={(x) => setIdx(Number(x))}
                 >
@@ -583,15 +592,21 @@ function ObjectEditor(props: {
 }
 
 function getCharacter(form: UseFormReturn<SelectForm>, idx: number): Character {
-  const record = CharacterRecord.parse(form.watch(`character.list.${idx}`));
-  const weapon = Weapon.parse(form.watch(`weapon.list.${record.weapon}`));
-  const armor = Armor.parse(form.watch(`armor.list.${record.armor}`));
+  const record = CharacterRecord.validateSync(
+    form.watch(`character.list.${idx}`)
+  );
+  const weapon = Weapon.validateSync(
+    form.watch(`weapon.list.${Number(record.weapon)}`)
+  );
+  const armor = Armor.validateSync(
+    form.watch(`armor.list.${Number(record.armor)}`)
+  );
   return { ...record, weapon, armor };
 }
 
 function trySetupCombat(form: UseFormReturn<SelectForm>) {
   try {
-    const inProgress = SelectForm.shape.setup.parse(form.watch("setup"));
+    const inProgress = SetupSchema.validateSync(form.watch("setup"));
     return {
       attacker: getCharacter(form, inProgress.attacker),
       defender: getCharacter(form, inProgress.defender),
@@ -644,6 +659,20 @@ function DiceGroup(props: {
   );
 }
 
+function validateSafe<T extends Schema>(
+  schema: T,
+  value: any
+): { success: true; data: InferType<T> } | { success: false; error: unknown } {
+  try {
+    return {
+      success: true,
+      data: schema.validateSync(value),
+    };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+
 function CombatSetup(props: {
   attacker: Character;
   defender: Character;
@@ -658,7 +687,7 @@ function CombatSetup(props: {
     return <p>Out of range!</p>;
   }
 
-  const toHit = SelectForm.shape.toHit.safeParse(form.watch("toHit"));
+  const toHit = validateSafe(ToHitSchema, form.watch("toHit"));
   const toHitFixed = toHit.success
     ? {
         attackRoll:
@@ -737,7 +766,7 @@ function CombatResolve(props: {
   const result = attackResolve(props);
   const { attacker, defender, damageDiceCount } = result;
 
-  const resolved = SelectForm.shape.resolve.safeParse(form.watch("resolve"));
+  const resolved = validateSafe(ResolveSchema, form.watch("resolve"));
   const resolvedFixed = resolved.success
     ? {
         damageRoll: resolved.data.damageRoll.slice(0, damageDiceCount),
@@ -830,7 +859,7 @@ function DamageResolve(props: {
       attackRoll: props.attackRoll,
       defenseRoll: props.defenseRoll,
       newStatus:
-        props.defender.woundState <= result.newStatus
+        Number(props.defender.woundState) <= result.newStatus
           ? undefined
           : result.newStatus,
     });
@@ -995,14 +1024,14 @@ function CombatLog(props: {
 function Main() {
   const form = useForm<SelectForm>({
     mode: "onBlur",
-    resolver: zodResolver(SelectForm),
+    resolver: yupResolver(SelectForm),
     defaultValues: {
       character: {
         list: [],
-        idx: "0",
+        idx: 0,
       },
-      weapon: { list: [], idx: "0" },
-      armor: { list: [], idx: "0" },
+      weapon: { list: [], idx: 0 },
+      armor: { list: [], idx: 0 },
       toHit: {
         attackRoll: [],
         defenseRoll: [],
@@ -1124,7 +1153,7 @@ function Main() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="dark">
       <div className="max-w-xl flex flex-col gap-3">
         <Main />
       </div>
