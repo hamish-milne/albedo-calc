@@ -4,37 +4,10 @@ import {
   type Armor,
   type Skill,
   WeaponRangeNames,
+  Range,
+  Cover,
+  WoundState,
 } from "./schema";
-
-export enum WoundState {
-  Uninjured = 0,
-  Wounded = 1,
-  Crippled = 2,
-  Incapacitated = 3,
-  Devastated = 4,
-}
-export const WoundStateNames = Object.keys(WoundState).filter((x) =>
-  isNaN(Number(x))
-);
-
-export enum Range {
-  Close = 0,
-  Short = 1,
-  Medium = 2,
-  Long = 3,
-  Extreme = 4,
-  Over = 5,
-}
-export const RangeNames = Object.keys(Range).filter((x) => isNaN(Number(x)));
-
-export enum Cover {
-  None = 0,
-  Quarter = 1,
-  Half = 2,
-  ThreeQuarter = 3,
-  Total = 4,
-}
-export const CoverNames = Object.keys(Cover).filter((x) => isNaN(Number(x)));
 
 function getRange(params: { attacker: Character; distance: number }): Range {
   const { attacker, distance } = params;
@@ -147,10 +120,12 @@ const maxCoverForWeapon: Record<Skill, Cover> = {
 function getDefenseDice(params: {
   attacker: Character;
   defender: Character;
+  maxCover: Cover;
+  concealment: Cover;
   range: Range;
   attackDice: string | number | number[];
 }): "Hit" | "Miss" | number[] {
-  const { attacker, defender, attackDice } = params;
+  const { attacker, defender, attackDice, maxCover, concealment } = params;
   let range = params.range;
   if (typeof attackDice === "string") {
     return "Miss";
@@ -158,32 +133,27 @@ function getDefenseDice(params: {
   const inMelee = attacker.weapon.action === "Melee" && range === Range.Close;
   let cover: Cover;
   if (defender.conditions.hiding) {
-    cover = defender.maxCover;
+    cover = maxCover;
   } else if (inMelee) {
     cover = defender.weapon.skill === "Melee" ? Cover.Quarter : Cover.None;
   } else {
-    cover = Math.min(
-      maxCoverForWeapon[defender.weapon.skill],
-      defender.maxCover
-    );
+    cover = Math.min(maxCoverForWeapon[defender.weapon.skill], maxCover);
   }
-  let concealment = inMelee
-    ? defender.concealment
-    : Math.max(cover, defender.concealment);
+  let finalConcealment = inMelee ? concealment : Math.max(cover, concealment);
 
   if (
     attacker.conditions.aiming &&
     attacker.weapon.action !== "Melee" &&
     concealment < Cover.Total
   ) {
-    concealment = Math.max(0, concealment - 1);
+    finalConcealment = Math.max(0, concealment - 1);
     cover = Math.max(0, cover - 1);
     range = Math.max(0, range - 1);
   }
 
-  const rangeDie = rangeToDie(params.range);
+  const rangeDie = rangeToDie(range);
   const coverDie = coverToDie(cover);
-  const concealmentDie = concealmentToDie(concealment);
+  const concealmentDie = concealmentToDie(finalConcealment);
   if (!rangeDie || !coverDie) {
     return "Miss";
   }
@@ -233,8 +203,9 @@ function getDamageDiceCount(params: {
   defender: Character;
   result: AttackResult;
   range: Range;
+  woundState: WoundState;
 }): number {
-  const { attacker, defender, result, range } = params;
+  const { attacker, defender, result, range, woundState } = params;
   if (result === "Miss" || result === "Tie") {
     return 0;
   }
@@ -242,7 +213,7 @@ function getDamageDiceCount(params: {
   if (attacker.weapon.shotgun) {
     total = 4 - range;
   } else {
-    total = 1 + Math.min(3, defender.woundState);
+    total = 1 + Math.min(3, woundState);
   }
   if (result === "Crit") {
     total += 1;
@@ -354,6 +325,9 @@ export function attackSetup(params: {
     ...params,
     attackDice: getAttackDice(params),
     range: getRange(params),
+    maxCover: Cover[params.defender.maxCover],
+    concealment: Cover[params.defender.concealment],
+    woundState: WoundState[params.defender.woundState],
   };
   return {
     ...a,
@@ -372,6 +346,7 @@ export function attackResolve(params: {
   const a = {
     ...params,
     result: getResult(params),
+    woundState: WoundState[params.defender.woundState],
   };
   return {
     ...a,
@@ -408,9 +383,10 @@ export function applyResult(params: {
   awe: number;
 }) {
   const { defender, newStatus, awe, injury } = params;
+  const woundState = WoundState[defender.woundState];
 
   return {
-    woundState: Math.max(defender.woundState, newStatus),
+    woundState: Math.max(woundState, newStatus),
     injury: Math.min(defender.body, (defender.injury || 0) + injury),
     awe: Math.min(defender.morale, (defender.awe || 0) + awe),
   };

@@ -24,14 +24,9 @@ import {
   applyResult,
   attackResolve,
   attackSetup,
-  CoverNames,
   damageResolve,
   DefaultArmor,
   DefaultWeapons,
-  Range,
-  RangeNames,
-  WoundState,
-  WoundStateNames,
   type AttackResult,
 } from "./rules";
 import {
@@ -56,6 +51,9 @@ import {
   ToHitSchema,
   ResolveSchema,
   SetupSchema,
+  Range,
+  RangeNames,
+  WoundState,
 } from "./schema";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
@@ -65,11 +63,11 @@ import {
   AccordionTrigger,
 } from "./components/ui/accordion";
 import { Table, TableBody, TableCell, TableRow } from "./components/ui/table";
-import {
-  type InferType,
-  type Schema,
-  type SchemaFieldDescription,
-  type SchemaObjectDescription,
+import type {
+  InferType,
+  Schema,
+  SchemaFieldDescription,
+  SchemaObjectDescription,
 } from "yup";
 
 function StringField<TFieldValues extends FieldValues>(props: {
@@ -452,11 +450,6 @@ function CharacterForm(props: { form: UseFormReturn<any>; prefix: string }) {
             render={(key, props) => <AnyField key={key} {...props} />}
           />
         );
-      case "woundState":
-        return <EnumField key={key} {...props} optionNames={WoundStateNames} />;
-      case "maxCover":
-      case "concealment":
-        return <EnumField key={key} {...props} optionNames={CoverNames} />;
       case "conditions":
       case "gifts":
       case "activeGifts":
@@ -812,6 +805,19 @@ const woundStateChange = [
   "a devastating hit",
 ];
 
+function resetDiceValues(form: UseFormReturn<SelectForm>) {
+  const names = [
+    "toHit.attackRoll",
+    "toHit.defenseRoll",
+    "resolve.damageRoll",
+  ] as const;
+  for (const name of names) {
+    for (let i = 0; i < 10; i++) {
+      form.setValue(`${name}.${i}`, 0);
+    }
+  }
+}
+
 function DamageResolve(props: {
   form: UseFormReturn<SelectForm>;
   addItem: (this: void, item: LogItem) => void;
@@ -837,16 +843,7 @@ function DamageResolve(props: {
         String(value)
       );
     }
-    const names = [
-      "toHit.attackRoll",
-      "toHit.defenseRoll",
-      "resolve.damageRoll",
-    ] as const;
-    for (const name of names) {
-      for (let i = 0; i < 10; i++) {
-        form.setValue(`${name}.${i}`, 0);
-      }
-    }
+    resetDiceValues(form);
     form.reset(undefined, {
       keepValues: true,
     });
@@ -890,6 +887,13 @@ function CombatForm(props: {
   const characters = values.character.list.map((x) => x.name);
 
   const setup = trySetupCombat(form);
+  const hasErrors = typeof setup !== "object";
+
+  useEffect(() => {
+    if (hasErrors) {
+      resetDiceValues(form);
+    }
+  }, [hasErrors]);
 
   return (
     <div className="flex gap-4 flex-col">

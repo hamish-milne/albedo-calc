@@ -1,5 +1,37 @@
 import * as yup from "yup";
 
+function getEnumNames<T extends { [k: string]: unknown }>(obj: T) {
+  return Object.keys(obj).filter((x) => isNaN(Number(x))) as Array<keyof T>;
+}
+
+export enum WoundState {
+  Uninjured = 0,
+  Wounded = 1,
+  Crippled = 2,
+  Incapacitated = 3,
+  Devastated = 4,
+}
+export const WoundStateNames = getEnumNames(WoundState);
+
+export enum Range {
+  Close = 0,
+  Short = 1,
+  Medium = 2,
+  Long = 3,
+  Extreme = 4,
+  Over = 5,
+}
+export const RangeNames = getEnumNames(Range);
+
+export enum Cover {
+  None = 0,
+  Quarter = 1,
+  Half = 2,
+  ThreeQuarter = 3,
+  Total = 4,
+}
+export const CoverNames = getEnumNames(Cover);
+
 const nameType = yup.string().required().min(1);
 const integer = yup
   .number()
@@ -8,7 +40,6 @@ const integer = yup
   .integer();
 
 const selectValue = integer.required();
-const enumValue = yup.mixed((_x): _x is number => true).required();
 
 const Marks = yup
   .object({
@@ -61,6 +92,10 @@ export type Armor = yup.InferType<typeof Armor>;
 
 const bool = yup.bool();
 
+function enumOf<T extends string>(options: T[]) {
+  return yup.string().oneOf(options).required();
+}
+
 export const CharacterRecord = yup.object({
   name: nameType.label("Character name"),
   body: integer.required().label("Body score"),
@@ -73,9 +108,9 @@ export const CharacterRecord = yup.object({
     .required()
     .oneOf(["Rote", "Roll", "Push", "Risk", "Breeze"])
     .label("Attack mode"),
-  woundState: enumValue.label("Wound state"),
-  maxCover: enumValue.label("Max cover in environment"),
-  concealment: enumValue.label("Concealment in environment"),
+  woundState: enumOf(WoundStateNames).label("Wound state"),
+  maxCover: enumOf(CoverNames).label("Max cover in environment"),
+  concealment: enumOf(CoverNames).label("Concealment in environment"),
   morale: integer.required().label("Morale"),
   awe: integer.label("Awe"),
   conditions: yup
@@ -162,9 +197,9 @@ export const DefaultChar: CharacterRecord = {
   },
   mode: "Roll",
   armor: 0,
-  woundState: "0" as unknown as number,
-  maxCover: "2" as unknown as number,
-  concealment: "0" as unknown as number,
+  woundState: "Uninjured",
+  maxCover: "Half",
+  concealment: "None",
   morale: 5,
   awe: 0,
   conditions: {},
