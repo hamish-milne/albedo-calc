@@ -386,7 +386,7 @@ export function applyResult(params: {
   const woundState = WoundState[defender.woundState];
 
   return {
-    woundState: Math.max(woundState, newStatus),
+    woundState: WoundState[Math.max(woundState, newStatus)],
     injury: Math.min(defender.body, (defender.injury || 0) + injury),
     awe: Math.min(defender.morale, (defender.awe || 0) + awe),
   };
