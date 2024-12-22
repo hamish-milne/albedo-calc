@@ -86,10 +86,15 @@ function Main() {
             <ObjectEditor
               form={form}
               prefix="character"
-              render={(prefix) => (
+              newItem={(newIdx) => ({
+                ...DefaultChar,
+                name: `New Character ${newIdx}`,
+              })}
+            >
+              {(prefix) => (
                 <CharacterForm key={prefix} prefix={prefix} form={form} />
               )}
-            />
+            </ObjectEditor>
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="weapon">
@@ -98,10 +103,15 @@ function Main() {
             <ObjectEditor
               form={form}
               prefix="weapon"
-              render={(prefix) => (
+              newItem={(newIdx) => ({
+                ...DefaultWeapons[0],
+                name: `New weapon ${newIdx}`,
+              })}
+            >
+              {(prefix) => (
                 <WeaponForm key={prefix} prefix={prefix} form={form} />
               )}
-            />
+            </ObjectEditor>
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="armor">
@@ -110,10 +120,15 @@ function Main() {
             <ObjectEditor
               form={form}
               prefix="armor"
-              render={(prefix) => (
+              newItem={(newIdx) => ({
+                ...DefaultArmor[0],
+                name: `New armor ${newIdx}`,
+              })}
+            >
+              {(prefix) => (
                 <ArmorForm key={prefix} prefix={prefix} form={form} />
               )}
-            />
+            </ObjectEditor>
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="combat">

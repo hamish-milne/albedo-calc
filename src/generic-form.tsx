@@ -10,7 +10,6 @@ import type { SchemaFieldDescription, SchemaObjectDescription } from "yup";
 import { Button } from "./components/ui/button";
 import { FormField, FormItem, FormControl } from "./components/ui/form";
 import { EnumField, TextField, BoolField } from "./custom-fields";
-import { DefaultChar } from "./schema";
 
 export function AnyField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
@@ -108,9 +107,10 @@ export type ListSelect<T> = { list: T[]; idx: number };
 export function ObjectEditor(props: {
   form: UseFormReturn<any>;
   prefix: string;
-  render: (this: void, prefix: string) => JSX.Element;
+  children: (this: void, prefix: string) => JSX.Element;
+  newItem: (this: void, newIdx: number) => { name: string };
 }) {
-  const { form, prefix, render } = props;
+  const { form, prefix, children, newItem } = props;
   const { list, idx } = form.getValues()[prefix] as ListSelect<{
     name: string;
   }>;
@@ -124,10 +124,7 @@ export function ObjectEditor(props: {
 
   function create() {
     const newIdx = list.length;
-    form.setValue(`${prefix}.list.${newIdx}`, {
-      ...DefaultChar,
-      name: `New Character ${list.length}`,
-    });
+    form.setValue(`${prefix}.list.${newIdx}`, newItem(newIdx));
     setIdx(newIdx);
   }
 
@@ -164,7 +161,7 @@ export function ObjectEditor(props: {
         <Button onClick={create}>New</Button>
         <Button>Delete</Button>
       </div>
-      {render(`${prefix}.list.${idx}`)}
+      {children(`${prefix}.list.${idx}`)}
     </div>
   );
 }
