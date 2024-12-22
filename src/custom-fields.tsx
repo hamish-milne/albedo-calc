@@ -20,6 +20,8 @@ import {
 } from "./components/ui/select";
 import { cn } from "./lib/utils";
 import { Separator } from "./components/ui/separator";
+import { Button } from "./components/ui/button";
+import { Minus, Plus } from "lucide-react";
 
 export function TextField<TFieldValues extends FieldValues>(
   props: {
@@ -36,6 +38,42 @@ export function TextField<TFieldValues extends FieldValues>(
         <FormLabel>{label}</FormLabel>
         <FormControl>
           <Input {...form.register(name)} {...inputProps} />
+        </FormControl>
+        <FormMessage />
+      </FormItem>
+    </FormFieldContext.Provider>
+  );
+}
+
+export function SpinField<TFieldValues extends FieldValues>(props: {
+  form: UseFormReturn<TFieldValues>;
+  name: Path<TFieldValues>;
+  label: string;
+  className?: string;
+}) {
+  const { form, name, label, className } = props;
+
+  function inc() {
+    form.setValue(name, (Number(form.getValues(name)) + 1) as any);
+  }
+  function dec() {
+    form.setValue(name, (Number(form.getValues(name)) - 1) as any);
+  }
+
+  return (
+    <FormFieldContext.Provider value={{ name }}>
+      <FormItem className={className}>
+        <FormLabel>{label}</FormLabel>
+        <FormControl className="flex gap-1">
+          <div>
+            <Button variant="secondary" size="icon" onClick={dec}>
+              <Minus />
+            </Button>
+            <Input {...form.register(name)} />
+            <Button variant="secondary" size="icon" onClick={inc}>
+              <Plus />
+            </Button>
+          </div>
         </FormControl>
         <FormMessage />
       </FormItem>

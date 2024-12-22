@@ -1,6 +1,6 @@
 import type { UseFormReturn } from "react-hook-form";
 import type { SchemaObjectDescription } from "yup";
-import { RefField, FlagsField } from "./custom-fields";
+import { RefField, FlagsField, SpinField } from "./custom-fields";
 import { AnyForm, RecordField, AnyField } from "./generic-form";
 import { DefaultWeapons, DefaultArmor } from "./rules";
 import { CharacterRecord, Weapon, Armor, SelectForm } from "./schema";
@@ -15,6 +15,9 @@ export function CharacterForm(props: {
     <AnyForm form={form} type={CharacterRecord.describe()} prefix={prefix}>
       {(key, props) => {
         switch (key as keyof CharacterRecord) {
+          case "injury":
+          case "awe":
+            return <SpinField key={key} {...props} />;
           case "weapon":
             return (
               <RefField

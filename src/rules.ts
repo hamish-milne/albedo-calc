@@ -258,7 +258,9 @@ function getTotalDamage(params: {
   );
 }
 
-function getThresholds(defender: Character): [number, number, number, number] {
+export function getThresholds(
+  defender: Character
+): [number, number, number, number] {
   const t1 =
     defender.armor.threshold +
     Math.max(0, defender.body - (defender.injury || 0)) * 2 +

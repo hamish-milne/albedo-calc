@@ -10,6 +10,7 @@ import {
   attackResolve,
   damageResolve,
   applyResult,
+  getThresholds,
 } from "./rules";
 import {
   Range,
@@ -22,7 +23,15 @@ import {
   ToHitSchema,
   RangeNames,
   ResolveSchema,
+  WoundStateNames,
 } from "./schema";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "./components/ui/table";
 
 function getCharacter(form: UseFormReturn<SelectForm>, idx: number): Character {
   const record = CharacterRecord.validateSync(
@@ -49,6 +58,33 @@ function trySetupCombat(form: UseFormReturn<SelectForm>) {
   } catch (e) {
     return e instanceof Error ? e.message : String(e);
   }
+}
+
+function ThresholdsTable(props: { defender: Character }) {
+  const { defender } = props;
+
+  const thresholds = getThresholds(defender);
+
+  const data: [string, number][] = [
+    ["Deflection", 11],
+    ...WoundStateNames.slice(1).map<[string, number]>((x, i) => [
+      x,
+      thresholds[i],
+    ]),
+  ];
+
+  return (
+    <Table>
+      <TableBody>
+        {data.map(([key, value]) => (
+          <TableRow key={key}>
+            <TableHead>{key}</TableHead>
+            <TableCell>{value}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
 }
 
 function DiceGroup(props: {
@@ -137,6 +173,7 @@ function CombatSetup(props: {
 
   return (
     <>
+      <ThresholdsTable defender={result.defender} />
       <p>
         <b>{result.attacker.name}</b> will attack <b>{result.defender.name}</b>{" "}
         with <b>{result.attacker.weapon.name}</b> at{" "}
