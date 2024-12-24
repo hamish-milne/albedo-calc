@@ -18,6 +18,7 @@ import { ObjectEditor } from "./generic-form";
 import { CombatLog, useCombatLog } from "./combat-log";
 import { CombatForm } from "./combat-form";
 import { CharacterForm, WeaponForm, ArmorForm } from "./custom-forms";
+import { ExportDialog } from "./export-dialog";
 
 function Main() {
   const form = useForm<SelectForm>({
@@ -144,6 +145,7 @@ function Main() {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+      <ExportDialog form={form} />
     </Form>
   );
 }

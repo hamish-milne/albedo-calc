@@ -45,13 +45,13 @@ export function TextField<TFieldValues extends FieldValues>(
   );
 }
 
-export function SpinField<TFieldValues extends FieldValues>(props: {
-  form: UseFormReturn<TFieldValues>;
-  name: Path<TFieldValues>;
-  label: string;
-  className?: string;
-}) {
-  const { form, name, label, className } = props;
+function SpinFieldSlot<TFieldValues extends FieldValues>(
+  props: {
+    form: UseFormReturn<TFieldValues>;
+    name: Path<TFieldValues>;
+  } & Omit<ComponentProps<"input">, "form">
+) {
+  const { form, name, ...inputProps } = props;
 
   function inc() {
     form.setValue(name, (Number(form.getValues(name)) + 1) as any);
@@ -61,19 +61,32 @@ export function SpinField<TFieldValues extends FieldValues>(props: {
   }
 
   return (
+    <div className="flex gap-1">
+      <Button variant="secondary" size="icon" onClick={dec}>
+        <Minus />
+      </Button>
+      <Input {...inputProps} {...form.register(name)} />
+      <Button variant="secondary" size="icon" onClick={inc}>
+        <Plus />
+      </Button>
+    </div>
+  );
+}
+
+export function SpinField<TFieldValues extends FieldValues>(props: {
+  form: UseFormReturn<TFieldValues>;
+  name: Path<TFieldValues>;
+  label: string;
+  className?: string;
+}) {
+  const { form, name, label, className } = props;
+
+  return (
     <FormFieldContext.Provider value={{ name }}>
       <FormItem className={className}>
         <FormLabel>{label}</FormLabel>
-        <FormControl className="flex gap-1">
-          <div>
-            <Button variant="secondary" size="icon" onClick={dec}>
-              <Minus />
-            </Button>
-            <Input {...form.register(name)} />
-            <Button variant="secondary" size="icon" onClick={inc}>
-              <Plus />
-            </Button>
-          </div>
+        <FormControl>
+          <SpinFieldSlot form={form} name={name} />
         </FormControl>
         <FormMessage />
       </FormItem>
