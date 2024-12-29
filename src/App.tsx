@@ -19,6 +19,7 @@ import { CombatLog, useCombatLog } from "./combat-log";
 import { CombatForm } from "./combat-form";
 import { CharacterForm, WeaponForm, ArmorForm } from "./custom-forms";
 import { ExportDialog } from "./export-dialog";
+import { BattleMap } from "./battlemap";
 
 function Main() {
   const form = useForm<SelectForm>({
@@ -58,12 +59,14 @@ function Main() {
     form.reset(values);
   }, [form]);
 
+  const { watch } = form;
+
   useEffect(() => {
-    const subscription = form.watch((value) =>
+    const subscription = watch((value) =>
       localStorage.setItem("data", JSON.stringify(value))
     );
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [watch]);
 
   const defaultOpen = useMemo(() => {
     const data = localStorage.getItem("open");
@@ -130,6 +133,12 @@ function Main() {
                 <ArmorForm key={prefix} prefix={prefix} form={form} />
               )}
             </ObjectEditor>
+          </AccordionContent>
+        </AccordionItem>
+        <AccordionItem value="map">
+          <AccordionTrigger className="text-lg">Map</AccordionTrigger>
+          <AccordionContent className="px-px pt-px">
+            <BattleMap form={form} />
           </AccordionContent>
         </AccordionItem>
         <AccordionItem value="combat">

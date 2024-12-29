@@ -138,8 +138,21 @@ export const CharacterRecord = yup.object({
       meleeExpert: bool.label("Melee Expert"),
     })
     .label("Active Gifts"),
+  position: yup
+    .object({
+      x: yup.number().required().label("X"),
+      y: yup.number().required().label("Y"),
+    })
+    .optional()
+    .label("Position"),
+  color: yup.string().label("Color"),
+  marker: enumOf(["Circle", "Cross", "Triangle", "Square", "Star"])
+    .optional()
+    .label("Marker"),
 });
 export type CharacterRecord = yup.InferType<typeof CharacterRecord>;
+
+export type MarkerType = CharacterRecord["marker"];
 
 export type Character = Omit<CharacterRecord, "weapon" | "armor"> & {
   weapon: Weapon;

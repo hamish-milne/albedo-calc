@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { UseFormReturn, Path } from "react-hook-form";
+import { type UseFormReturn, type Path, useWatch } from "react-hook-form";
 import type { Schema, InferType } from "yup";
 import type { LogItem } from "./combat-log";
 import { Button } from "./components/ui/button";
@@ -34,20 +34,21 @@ import {
 } from "./components/ui/table";
 
 function getCharacter(form: UseFormReturn<SelectForm>, idx: number): Character {
+  const { control } = form;
   const record = CharacterRecord.validateSync(
-    form.watch(`character.list.${idx}`)
+    useWatch({ control, name: `character.list.${idx}` })
   );
   const weapon = Weapon.validateSync(
-    form.watch(`weapon.list.${Number(record.weapon)}`)
+    useWatch({ control, name: `weapon.list.${Number(record.weapon)}` })
   );
   const armor = Armor.validateSync(
-    form.watch(`armor.list.${Number(record.armor)}`)
+    useWatch({ control, name: `armor.list.${Number(record.armor)}` })
   );
   return { ...record, weapon, armor };
 }
 
 function trySetupCombat(form: UseFormReturn<SelectForm>) {
-  const s = form.watch("setup");
+  const s = useWatch({ control: form.control, name: "setup" });
   try {
     const inProgress = SetupSchema.validateSync(s);
     return {
@@ -157,7 +158,10 @@ function CombatSetup(props: {
     return <p>Out of range!</p>;
   }
 
-  const toHit = validateSafe(ToHitSchema, form.watch("toHit"));
+  const toHit = validateSafe(
+    ToHitSchema,
+    useWatch({ control: form.control, name: "toHit" })
+  );
   const toHitFixed = toHit.success
     ? {
         attackRoll:
@@ -240,7 +244,10 @@ function CombatResolve(props: {
   const result = attackResolve(props);
   const { attacker, defender, damageDiceCount } = result;
 
-  const resolved = validateSafe(ResolveSchema, form.watch("resolve"));
+  const resolved = validateSafe(
+    ResolveSchema,
+    useWatch({ control: form.control, name: "resolve" })
+  );
   const resolvedFixed = resolved.success
     ? {
         damageRoll: resolved.data.damageRoll.slice(0, damageDiceCount),
@@ -310,7 +317,10 @@ function DamageResolve(props: {
   const result = damageResolve(props);
   const { defender, totalDamage, newStatus, awe, injury } = result;
 
-  const defenderIdx = form.watch(`setup.defender`);
+  const defenderIdx = useWatch({
+    control: form.control,
+    name: `setup.defender`,
+  });
 
   function apply() {
     const toSet = applyResult(result);

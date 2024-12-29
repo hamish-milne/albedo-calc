@@ -1,6 +1,6 @@
 import type { UseFormReturn } from "react-hook-form";
 import type { SchemaObjectDescription } from "yup";
-import { RefField, FlagsField, SpinField } from "./custom-fields";
+import { RefField, FlagsField, SpinField, TextField } from "./custom-fields";
 import { AnyForm, RecordField, AnyField } from "./generic-form";
 import { DefaultWeapons, DefaultArmor } from "./rules";
 import { CharacterRecord, Weapon, Armor, SelectForm } from "./schema";
@@ -35,6 +35,7 @@ export function CharacterForm(props: {
               />
             );
           case "marks":
+          case "position":
             return (
               <RecordField key={key} {...props} type={props.type as any}>
                 {(key, props) => <AnyField key={key} {...props} />}
@@ -53,6 +54,8 @@ export function CharacterForm(props: {
               />
             );
           }
+          case "color":
+            return <TextField key={key} {...props} type="color" />;
           default:
             return <AnyField key={key} {...props} />;
         }

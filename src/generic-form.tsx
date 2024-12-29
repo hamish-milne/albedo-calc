@@ -56,7 +56,7 @@ export function RecordField<TFieldValues extends FieldValues>(props: {
         children(x, {
           form,
           name: `${name}.${x}` as Path<TFieldValues>,
-          label: x,
+          label: type.fields[x].label || x,
           type: type.fields[x],
         })
       )}
