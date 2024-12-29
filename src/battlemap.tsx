@@ -13,6 +13,7 @@ import {
 } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 import type { CharacterRecord, MarkerType, SelectForm } from "./schema";
+import { MapForm } from "./custom-forms";
 
 const DraggableContext = createContext<{
   setHeld: (el: DragHandler) => void;
@@ -73,6 +74,7 @@ export function Draggable(props: {
     onPointerDown(e) {
       if (e.button === LMOUSE) {
         setHeld(handler);
+        handler(e);
       }
     },
   });
@@ -93,6 +95,7 @@ export function DraggableSVG<TEl extends SVGGraphicsElement>(props: {
 }) {
   const { handler, children } = props;
   const ref = useRef<TEl | null>(null);
+  const dragState = useRef<[number, number]>(undefined);
 
   return (
     <Draggable
@@ -102,25 +105,35 @@ export function DraggableSVG<TEl extends SVGGraphicsElement>(props: {
           return;
         }
         const rect = current.getBoundingClientRect();
-        const dx = e.clientX - (rect.right + rect.left) / 2;
-        const dy = e.clientY - (rect.bottom + rect.top) / 2;
-        const list = current.transform.baseVal;
-        if (
-          list[list.length - 1]?.type !== SVGTransform.SVG_TRANSFORM_TRANSLATE
-        ) {
-          let root: ParentNode = current;
-          while (!(root instanceof SVGSVGElement)) {
-            root = root.parentNode!;
+        if (e.type === "pointerdown") {
+          const x0 = e.clientX - rect.x;
+          const y0 = e.clientY - rect.y;
+          dragState.current = [x0, y0];
+        } else {
+          if (!dragState.current) {
+            return;
           }
-          list.appendItem(root.createSVGTransform());
-          list[list.length - 1].setTranslate(0, 0);
+          const [x0, y0] = dragState.current;
+          const dx = e.clientX - rect.x - x0;
+          const dy = e.clientY - rect.y - y0;
+          const list = current.transform.baseVal;
+          if (
+            list[list.length - 1]?.type !== SVGTransform.SVG_TRANSFORM_TRANSLATE
+          ) {
+            let root: ParentNode = current;
+            while (!(root instanceof SVGSVGElement)) {
+              root = root.parentNode!;
+            }
+            list.appendItem(root.createSVGTransform());
+            list[list.length - 1].setTranslate(0, 0);
+          }
+          const t = list[list.length - 1];
+          const { x, y } = handler(e, current, {
+            x: t.matrix.e + dx,
+            y: t.matrix.f + dy,
+          });
+          t.setTranslate(x, y);
         }
-        const t = list[list.length - 1];
-        const { x, y } = handler(e, current, {
-          x: t.matrix.e + dx,
-          y: t.matrix.f + dy,
-        });
-        t.setTranslate(x, y);
       }}
     >
       {(inner) => children({ ...inner, ref })}
@@ -186,24 +199,41 @@ function Marker(
 
 function CharMarker(
   props: {
-    handler: SVGDragHandler<SVGGElement>;
+    idx: number;
     character: CharacterRecord;
+    snap: number;
+    pixelsPerUnit: number;
+    form: UseFormReturn<SelectForm>;
   } & ComponentProps<"g">
 ) {
-  const { handler, character, ...gProps } = props;
+  const { idx, character, snap, pixelsPerUnit, form, ...gProps } = props;
+
+  const px = (character.position?.x || 0) * pixelsPerUnit;
+  const py = (character.position?.y || 0) * pixelsPerUnit;
 
   return (
-    <DraggableSVG handler={handler}>
+    <DraggableSVG
+      handler={(e, _svg, pos) => {
+        if (e.buttons) {
+          return pos;
+        }
+        const newPos = {
+          x: toNearest(pos.x, snap),
+          y: toNearest(pos.y, snap),
+        };
+        form.setValue(`character.list.${idx}.position`, {
+          x: newPos.x / pixelsPerUnit,
+          y: newPos.y / pixelsPerUnit,
+        });
+        return newPos;
+      }}
+    >
       {(inner) => (
-        <g
-          {...inner}
-          transform={`translate(${character.position?.x || 0},${character.position?.y || 0})`}
-          {...gProps}
-        >
+        <g {...inner} transform={`translate(${px},${py})`} {...gProps}>
           <Marker
             size={10}
             fill={character.color}
-            className="stroke-foreground"
+            className="stroke-foreground cursor-move"
             type={character.marker || "Circle"}
           />
           <text
@@ -226,48 +256,62 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
     name: "character.list",
   });
 
+  const { width, height, ...config } = useWatch({
+    control: form.control,
+    name: "map",
+  });
+  const pixelsPerUnit = config.pixelsPerUnit || 20;
+  const snap = (config.snap || 1) * pixelsPerUnit;
+  const gridCellSize = (config.gridCellSize || 1) * pixelsPerUnit;
+
   return (
-    <DraggableProvider>
-      {(props) => (
-        <svg height={500} {...props}>
-          <defs>
-            <pattern
-              x={0}
-              y={0}
-              width={20}
-              height={20}
-              id="battleGrid"
-              patternUnits="userSpaceOnUse"
-            >
-              <rect
+    <>
+      <MapForm form={form} />
+      <DraggableProvider>
+        {(props) => (
+          <svg
+            width={(width || 25) * pixelsPerUnit}
+            height={(height || 25) * pixelsPerUnit}
+            {...props}
+          >
+            <defs>
+              <pattern
                 x={0}
                 y={0}
-                width={20}
-                height={20}
-                className="stroke-gray-500"
-              />
-            </pattern>
-          </defs>
-          <rect x={0} y={0} width={500} height={500} fill="url(#battleGrid)" />
-          {characters.map((character, idx) => (
-            <CharMarker
-              key={idx}
-              character={character}
-              handler={(e, svg, pos) => {
-                if (e.buttons) {
-                  return pos;
-                }
-                const newPos = {
-                  x: toNearest(pos.x, 20),
-                  y: toNearest(pos.y, 20),
-                };
-                form.setValue(`character.list.${idx}.position`, newPos);
-                return newPos;
-              }}
+                width={gridCellSize}
+                height={gridCellSize}
+                id="battleGrid"
+                patternUnits="userSpaceOnUse"
+              >
+                <rect
+                  x={0}
+                  y={0}
+                  width={gridCellSize}
+                  height={gridCellSize}
+                  className="stroke-gray-500"
+                />
+              </pattern>
+            </defs>
+            <rect
+              x={0}
+              y={0}
+              width={500}
+              height={500}
+              fill="url(#battleGrid)"
             />
-          ))}
-        </svg>
-      )}
-    </DraggableProvider>
+            {characters.map((character, idx) => (
+              <CharMarker
+                key={idx}
+                idx={idx}
+                character={character}
+                snap={snap}
+                pixelsPerUnit={pixelsPerUnit}
+                form={form}
+              />
+            ))}
+          </svg>
+        )}
+      </DraggableProvider>
+    </>
   );
 }

@@ -39,6 +39,13 @@ function Main() {
       resolve: {
         damageRoll: [],
       },
+      map: {
+        width: 25,
+        height: 25,
+        gridCellSize: 1,
+        snap: 1,
+        pixelsPerUnit: 20,
+      },
     },
   });
 

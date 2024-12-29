@@ -185,10 +185,19 @@ export const ResolveSchema = yup.object({
   damageRoll: DiceRoll.label("Damage roll"),
 });
 
+export const MapSchema = yup.object({
+  width: integer.label("Width"),
+  height: integer.label("Height"),
+  gridCellSize: integer.label("Grid cell size"),
+  pixelsPerUnit: integer.label("Pixels per unit"),
+  snap: integer.label("Snap"),
+});
+
 export const SelectForm = yup.object({
   character: ListSelect(CharacterRecord),
   weapon: ListSelect(Weapon),
   armor: ListSelect(Armor),
+  map: MapSchema,
   setup: SetupSchema,
   toHit: ToHitSchema,
   resolve: ResolveSchema,

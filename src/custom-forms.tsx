@@ -1,9 +1,15 @@
 import type { UseFormReturn } from "react-hook-form";
-import type { SchemaObjectDescription } from "yup";
+import type { InferType, SchemaObjectDescription } from "yup";
 import { RefField, FlagsField, SpinField, TextField } from "./custom-fields";
 import { AnyForm, RecordField, AnyField } from "./generic-form";
 import { DefaultWeapons, DefaultArmor } from "./rules";
-import { CharacterRecord, Weapon, Armor, SelectForm } from "./schema";
+import {
+  CharacterRecord,
+  Weapon,
+  Armor,
+  SelectForm,
+  MapSchema,
+} from "./schema";
 
 export function CharacterForm(props: {
   form: UseFormReturn<SelectForm>;
@@ -95,6 +101,20 @@ export function ArmorForm(props: { form: UseFormReturn<any>; prefix: string }) {
     <AnyForm form={form} type={Armor.describe()} prefix={prefix}>
       {(key, props) => {
         switch (key as keyof Weapon) {
+          default:
+            return <AnyField key={key} {...props} />;
+        }
+      }}
+    </AnyForm>
+  );
+}
+
+export function MapForm(props: { form: UseFormReturn<SelectForm> }) {
+  const { form } = props;
+  return (
+    <AnyForm form={form} type={MapSchema.describe()} prefix={"map"}>
+      {(key, props) => {
+        switch (key as keyof InferType<typeof MapSchema>) {
           default:
             return <AnyField key={key} {...props} />;
         }
