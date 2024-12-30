@@ -1,8 +1,7 @@
-import type { UseFormReturn } from "react-hook-form";
+import { useWatch, type UseFormReturn } from "react-hook-form";
 import type { SchemaObjectDescription } from "yup";
 import { RefField, FlagsField, SpinField, TextField } from "./custom-fields";
-import { AnyForm, AnyField } from "./generic-form";
-import { DefaultWeapons, DefaultArmor } from "./rules";
+import { AnyForm, AnyField, type AnyFieldProps } from "./generic-form";
 import {
   CharacterRecord,
   Weapon,
@@ -10,6 +9,20 @@ import {
   SelectForm,
   MapSchema,
 } from "./schema";
+
+function ListSelect(
+  props: { listName: "weapon" | "armor" } & AnyFieldProps<SelectForm>
+) {
+  const {
+    listName,
+    form: { control },
+  } = props;
+  const list: { name: string }[] = useWatch({
+    control,
+    name: `${listName}.list`,
+  });
+  return <RefField {...props} optionLabels={list.map((x) => x.name)} />;
+}
 
 export function CharacterForm(props: {
   form: UseFormReturn<SelectForm>;
@@ -20,26 +33,14 @@ export function CharacterForm(props: {
   return (
     <AnyForm form={form} type={CharacterRecord.describe()} prefix={prefix}>
       {(key, props) => {
-        switch (key as keyof CharacterRecord) {
+        const fName = key as keyof CharacterRecord;
+        switch (fName) {
           case "injury":
           case "awe":
             return <SpinField key={key} {...props} />;
           case "weapon":
-            return (
-              <RefField
-                key={key}
-                {...props}
-                optionLabels={DefaultWeapons.map((x) => x.name)}
-              />
-            );
           case "armor":
-            return (
-              <RefField
-                key={key}
-                {...props}
-                optionLabels={DefaultArmor.map((x) => x.name)}
-              />
-            );
+            return <ListSelect key={key} {...props} listName={fName} />;
           case "conditions":
           case "gifts":
           case "activeGifts": {
