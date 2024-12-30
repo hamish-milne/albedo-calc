@@ -266,13 +266,16 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
 
   return (
     <>
-      <MapForm form={form} />
+      <div className="flex gap-2 flex-wrap *:flex-1 *:min-w-24">
+        <MapForm form={form} />
+      </div>
       <DraggableProvider>
         {(props) => (
           <svg
             width={(width || 25) * pixelsPerUnit}
             height={(height || 25) * pixelsPerUnit}
             {...props}
+            className="m-auto"
           >
             <defs>
               <pattern

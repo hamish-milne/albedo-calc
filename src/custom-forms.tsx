@@ -1,7 +1,7 @@
 import type { UseFormReturn } from "react-hook-form";
-import type { InferType, SchemaObjectDescription } from "yup";
+import type { SchemaObjectDescription } from "yup";
 import { RefField, FlagsField, SpinField, TextField } from "./custom-fields";
-import { AnyForm, RecordField, AnyField } from "./generic-form";
+import { AnyForm, AnyField } from "./generic-form";
 import { DefaultWeapons, DefaultArmor } from "./rules";
 import {
   CharacterRecord,
@@ -40,13 +40,6 @@ export function CharacterForm(props: {
                 optionLabels={DefaultArmor.map((x) => x.name)}
               />
             );
-          case "marks":
-          case "position":
-            return (
-              <RecordField key={key} {...props} type={props.type as any}>
-                {(key, props) => <AnyField key={key} {...props} />}
-              </RecordField>
-            );
           case "conditions":
           case "gifts":
           case "activeGifts": {
@@ -76,49 +69,17 @@ export function WeaponForm(props: {
 }) {
   const { form, prefix } = props;
 
-  return (
-    <AnyForm form={form} type={Weapon.describe()} prefix={prefix}>
-      {(key, props) => {
-        switch (key as keyof Weapon) {
-          case "ranges":
-            return (
-              <RecordField key={key} {...props} type={props.type as any}>
-                {(key, props) => <AnyField key={key} {...props} />}
-              </RecordField>
-            );
-          default:
-            return <AnyField key={key} {...props} />;
-        }
-      }}
-    </AnyForm>
-  );
+  return <AnyForm form={form} type={Weapon.describe()} prefix={prefix} />;
 }
 
 export function ArmorForm(props: { form: UseFormReturn<any>; prefix: string }) {
   const { form, prefix } = props;
 
-  return (
-    <AnyForm form={form} type={Armor.describe()} prefix={prefix}>
-      {(key, props) => {
-        switch (key as keyof Weapon) {
-          default:
-            return <AnyField key={key} {...props} />;
-        }
-      }}
-    </AnyForm>
-  );
+  return <AnyForm form={form} type={Armor.describe()} prefix={prefix} />;
 }
 
 export function MapForm(props: { form: UseFormReturn<SelectForm> }) {
   const { form } = props;
-  return (
-    <AnyForm form={form} type={MapSchema.describe()} prefix={"map"}>
-      {(key, props) => {
-        switch (key as keyof InferType<typeof MapSchema>) {
-          default:
-            return <AnyField key={key} {...props} />;
-        }
-      }}
-    </AnyForm>
-  );
+
+  return <AnyForm form={form} type={MapSchema.describe()} prefix={"map"} />;
 }

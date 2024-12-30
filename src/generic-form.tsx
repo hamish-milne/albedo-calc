@@ -34,6 +34,14 @@ export function AnyField<TFieldValues extends FieldValues>(props: {
       return <TextField form={form} name={name} label={label} />;
     case "boolean":
       return <BoolField form={form} name={name} label={label} />;
+    case "object":
+      return (
+        <RecordField
+          form={form}
+          name={name}
+          type={type as SchemaObjectDescription}
+        />
+      );
     default:
       throw Error(`Unknown type: ${type.type}`);
   }
@@ -43,13 +51,16 @@ export function RecordField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
   type: SchemaObjectDescription;
   name: Path<TFieldValues>;
-  children: (
+  children?: (
     this: void,
     field: string,
     props: AnyFieldProps<TFieldValues>
   ) => JSX.Element;
 }) {
-  const { form, type, name, children } = props;
+  const { form, type, name } = props;
+  const children =
+    props.children || ((key, props) => <AnyField key={key} {...props} />);
+
   return (
     <div className="flex flex-wrap gap-2 *:flex-1 *:min-w-12">
       {Object.keys(type.fields).map((x) =>
@@ -75,16 +86,18 @@ export function AnyForm<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
   type: SchemaObjectDescription;
   prefix?: string;
-  children: (
+  children?: (
     this: void,
     field: string,
     props: AnyFieldProps<TFieldValues>
   ) => JSX.Element;
 }) {
-  const { form, type, prefix, children } = props;
+  const { form, type, prefix } = props;
+  const children =
+    props.children || ((key, props) => <AnyField key={key} {...props} />);
   const fullPrefix = prefix ? `${prefix}.` : "";
   return (
-    <div className="flex gap-4 flex-col">
+    <>
       {(
         Object.entries(type.fields) as [
           Path<TFieldValues>,
@@ -98,7 +111,7 @@ export function AnyForm<TFieldValues extends FieldValues>(props: {
           label: type.label || name,
         })
       )}
-    </div>
+    </>
   );
 }
 
@@ -129,7 +142,7 @@ export function ObjectEditor(props: {
   }
 
   return (
-    <div className="flex gap-4 flex-col">
+    <>
       <div className="flex gap-2">
         <FormField
           name={`${prefix}.idx`}
@@ -162,6 +175,6 @@ export function ObjectEditor(props: {
         <Button>Delete</Button>
       </div>
       {children(`${prefix}.list.${idx}`)}
-    </div>
+    </>
   );
 }

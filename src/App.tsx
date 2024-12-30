@@ -6,7 +6,7 @@ import { Form } from "./components/ui/form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
 import { DefaultArmor, DefaultWeapons } from "./rules";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { SelectForm, DefaultChar } from "./schema";
 import {
   Accordion,
@@ -20,6 +20,22 @@ import { CombatForm } from "./combat-form";
 import { CharacterForm, WeaponForm, ArmorForm } from "./custom-forms";
 import { ExportDialog } from "./export-dialog";
 import { BattleMap } from "./battlemap";
+
+function TopLevelItem(props: {
+  value: string;
+  label: string;
+  children: ReactNode;
+}) {
+  const { value, label, children } = props;
+  return (
+    <AccordionItem value={value}>
+      <AccordionTrigger className="text-lg">{label}</AccordionTrigger>
+      <AccordionContent className="flex gap-4 flex-col px-px pt-px">
+        {children}
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
 
 function Main() {
   const form = useForm<SelectForm>({
@@ -91,75 +107,55 @@ function Main() {
           localStorage.setItem("open", JSON.stringify(value))
         }
       >
-        <AccordionItem value="character">
-          <AccordionTrigger className="text-lg">Character</AccordionTrigger>
-          <AccordionContent className="px-px pt-px">
-            <ObjectEditor
-              form={form}
-              prefix="character"
-              newItem={(newIdx) => ({
-                ...DefaultChar,
-                name: `New Character ${newIdx}`,
-              })}
-            >
-              {(prefix) => (
-                <CharacterForm key={prefix} prefix={prefix} form={form} />
-              )}
-            </ObjectEditor>
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="weapon">
-          <AccordionTrigger className="text-lg">Weapon</AccordionTrigger>
-          <AccordionContent className="px-px pt-px">
-            <ObjectEditor
-              form={form}
-              prefix="weapon"
-              newItem={(newIdx) => ({
-                ...DefaultWeapons[0],
-                name: `New weapon ${newIdx}`,
-              })}
-            >
-              {(prefix) => (
-                <WeaponForm key={prefix} prefix={prefix} form={form} />
-              )}
-            </ObjectEditor>
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="armor">
-          <AccordionTrigger className="text-lg">Armor</AccordionTrigger>
-          <AccordionContent className="px-px pt-px">
-            <ObjectEditor
-              form={form}
-              prefix="armor"
-              newItem={(newIdx) => ({
-                ...DefaultArmor[0],
-                name: `New armor ${newIdx}`,
-              })}
-            >
-              {(prefix) => (
-                <ArmorForm key={prefix} prefix={prefix} form={form} />
-              )}
-            </ObjectEditor>
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="map">
-          <AccordionTrigger className="text-lg">Map</AccordionTrigger>
-          <AccordionContent className="px-px pt-px">
-            <BattleMap form={form} />
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="combat">
-          <AccordionTrigger className="text-lg">Combat</AccordionTrigger>
-          <AccordionContent className="px-px pt-px">
-            <CombatForm form={form} addItem={addItem} />
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="log">
-          <AccordionTrigger className="text-lg">Log</AccordionTrigger>
-          <AccordionContent>
-            <CombatLog items={items} deleteItem={deleteItem} />
-          </AccordionContent>
-        </AccordionItem>
+        <TopLevelItem value="character" label="Character">
+          <ObjectEditor
+            form={form}
+            prefix="character"
+            newItem={(newIdx) => ({
+              ...DefaultChar,
+              name: `New Character ${newIdx}`,
+            })}
+          >
+            {(prefix) => (
+              <CharacterForm key={prefix} prefix={prefix} form={form} />
+            )}
+          </ObjectEditor>
+        </TopLevelItem>
+        <TopLevelItem value="weapon" label="Weapon">
+          <ObjectEditor
+            form={form}
+            prefix="weapon"
+            newItem={(newIdx) => ({
+              ...DefaultWeapons[0],
+              name: `New weapon ${newIdx}`,
+            })}
+          >
+            {(prefix) => (
+              <WeaponForm key={prefix} prefix={prefix} form={form} />
+            )}
+          </ObjectEditor>
+        </TopLevelItem>
+        <TopLevelItem value="armor" label="Armor">
+          <ObjectEditor
+            form={form}
+            prefix="armor"
+            newItem={(newIdx) => ({
+              ...DefaultArmor[0],
+              name: `New armor ${newIdx}`,
+            })}
+          >
+            {(prefix) => <ArmorForm key={prefix} prefix={prefix} form={form} />}
+          </ObjectEditor>
+        </TopLevelItem>
+        <TopLevelItem value="map" label="Map">
+          <BattleMap form={form} />
+        </TopLevelItem>
+        <TopLevelItem value="combat" label="Combat">
+          <CombatForm form={form} addItem={addItem} />
+        </TopLevelItem>
+        <TopLevelItem value="log" label="Log">
+          <CombatLog items={items} deleteItem={deleteItem} />
+        </TopLevelItem>
       </Accordion>
       <ExportDialog form={form} />
     </Form>

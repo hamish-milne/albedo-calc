@@ -19,7 +19,6 @@ import {
   CharacterRecord,
   Weapon,
   Armor,
-  SetupSchema,
   ToHitSchema,
   RangeNames,
   ResolveSchema,
@@ -33,27 +32,32 @@ import {
   TableCell,
 } from "./components/ui/table";
 
-function getCharacter(form: UseFormReturn<SelectForm>, idx: number): Character {
-  const { control } = form;
-  const record = CharacterRecord.validateSync(
-    useWatch({ control, name: `character.list.${idx}` })
-  );
-  const weapon = Weapon.validateSync(
-    useWatch({ control, name: `weapon.list.${Number(record.weapon)}` })
-  );
-  const armor = Armor.validateSync(
-    useWatch({ control, name: `armor.list.${Number(record.armor)}` })
-  );
-  return { ...record, weapon, armor };
+function getCharacter(
+  idx: number,
+  characters: CharacterRecord[],
+  weapons: Weapon[],
+  armors: Armor[]
+): Character {
+  return {
+    ...characters[idx],
+    weapon: weapons[characters[idx].weapon],
+    armor: armors[characters[idx].armor],
+  };
 }
 
 function trySetupCombat(form: UseFormReturn<SelectForm>) {
-  const s = useWatch({ control: form.control, name: "setup" });
+  const inProgress = useWatch({ control: form.control, name: "setup" });
+  const characters = useWatch({
+    control: form.control,
+    name: "character.list",
+  });
+  const weapons = useWatch({ control: form.control, name: "weapon.list" });
+  const armor = useWatch({ control: form.control, name: "armor.list" });
+
   try {
-    const inProgress = SetupSchema.validateSync(s);
     return {
-      attacker: getCharacter(form, inProgress.attacker),
-      defender: getCharacter(form, inProgress.defender),
+      attacker: getCharacter(inProgress.attacker, characters, weapons, armor),
+      defender: getCharacter(inProgress.defender, characters, weapons, armor),
       distance: inProgress.distance,
     };
   } catch (e) {
