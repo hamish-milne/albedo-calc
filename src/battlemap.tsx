@@ -208,8 +208,8 @@ function CharMarker(
 ) {
   const { idx, character, snap, pixelsPerUnit, form, ...gProps } = props;
 
-  const px = (character.position?.x || 0) * pixelsPerUnit;
-  const py = (character.position?.y || 0) * pixelsPerUnit;
+  const px = character.position.x * pixelsPerUnit;
+  const py = character.position.y * pixelsPerUnit;
 
   return (
     <DraggableSVG

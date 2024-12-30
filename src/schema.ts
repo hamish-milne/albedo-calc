@@ -172,7 +172,6 @@ const DiceRoll = yup.array(integer.required()).required();
 export const SetupSchema = yup.object({
   attacker: integer.required().label("Attacker"),
   defender: integer.required().label("Defender"),
-  distance: integer.required().label("Distance"),
 });
 
 export const ToHitSchema = yup.object({

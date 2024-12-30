@@ -58,7 +58,6 @@ function trySetupCombat(form: UseFormReturn<SelectForm>) {
     return {
       attacker: getCharacter(inProgress.attacker, characters, weapons, armor),
       defender: getCharacter(inProgress.defender, characters, weapons, armor),
-      distance: inProgress.distance,
     };
   } catch (e) {
     return e instanceof Error ? e.message : String(e);
@@ -151,7 +150,6 @@ function validateSafe<T extends Schema>(
 function CombatSetup(props: {
   attacker: Character;
   defender: Character;
-  distance: number;
   form: UseFormReturn<SelectForm>;
   addItem: (this: void, item: LogItem) => void;
 }) {
@@ -185,7 +183,7 @@ function CombatSetup(props: {
       <p>
         <b>{result.attacker.name}</b> will attack <b>{result.defender.name}</b>{" "}
         with <b>{result.attacker.weapon.name}</b> at{" "}
-        <b>{RangeNames[result.range]}</b> range.
+        <b>{RangeNames[result.range]}</b> range ({result.distance} meters).
       </p>
       {typeof result.attackDice === "number" ? (
         <p>
@@ -400,7 +398,6 @@ export function CombatForm(props: {
         label="Defender"
         optionLabels={characters}
       />
-      <TextField form={form} label="Distance" name="setup.distance" />
 
       {typeof setup === "object" ? (
         <CombatSetup {...setup} form={form} addItem={addItem} />

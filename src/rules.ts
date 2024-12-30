@@ -9,16 +9,24 @@ import {
   WoundState,
 } from "./schema";
 
-function getRange(params: { attacker: Character; distance: number }): Range {
-  const { attacker, distance } = params;
+function getRange(params: { attacker: Character; defender: Character }): {
+  range: Range;
+  distance: number;
+} {
+  const { attacker, defender } = params;
+  const { x: x1, y: y1 } = attacker.position;
+  const { x: x2, y: y2 } = defender.position;
+  const dx = x1 - x2;
+  const dy = y1 - y2;
+  const distance = Math.ceil(Math.sqrt(dx * dx + dy + dy));
   const { ranges } = attacker.weapon;
   for (let i = 0; i < WeaponRangeNames.length; i++) {
     const range = ranges[WeaponRangeNames[i]];
     if (range && distance <= range) {
-      return i;
+      return { range: i, distance };
     }
   }
-  return Range.Over;
+  return { range: Range.Over, distance };
 }
 
 export type AttackResult = "Miss" | "Tie" | "Hit" | "Crit";
@@ -321,12 +329,11 @@ function getInjury(params: { defender: Character; newStatus: WoundState }) {
 export function attackSetup(params: {
   attacker: Character;
   defender: Character;
-  distance: number;
 }) {
   const a = {
     ...params,
     attackDice: getAttackDice(params),
-    range: getRange(params),
+    ...getRange(params),
     maxCover: Cover[params.defender.maxCover],
     concealment: Cover[params.defender.concealment],
     woundState: WoundState[params.defender.woundState],
