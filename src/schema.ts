@@ -143,7 +143,6 @@ export const CharacterRecord = yup.object({
       x: yup.number().required().label("X"),
       y: yup.number().required().label("Y"),
     })
-    .optional()
     .label("Position"),
   color: yup.string().label("Color"),
   marker: enumOf(["Circle", "Cross", "Triangle", "Square", "Star"])
@@ -227,4 +226,5 @@ export const DefaultChar: CharacterRecord = {
   conditions: {},
   gifts: {},
   activeGifts: {},
+  position: { x: 1, y: 1 },
 };

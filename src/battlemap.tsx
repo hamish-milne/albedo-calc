@@ -255,6 +255,7 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
     control: form.control,
     name: "character.list",
   });
+  const combat = useWatch({ control: form.control, name: "setup" }) || {};
 
   const { width, height, ...config } = useWatch({
     control: form.control,
@@ -263,6 +264,11 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
   const pixelsPerUnit = config.pixelsPerUnit || 20;
   const snap = (config.snap || 1) * pixelsPerUnit;
   const gridCellSize = (config.gridCellSize || 1) * pixelsPerUnit;
+
+  const attacker = characters[combat.attacker];
+  const defender = characters[combat.defender];
+  const line =
+    attacker && defender ? [attacker.position, defender.position] : undefined;
 
   return (
     <>
@@ -312,6 +318,15 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
                 form={form}
               />
             ))}
+            {line ? (
+              <line
+                x1={line[0].x * pixelsPerUnit}
+                y1={line[0].y * pixelsPerUnit}
+                x2={line[1].x * pixelsPerUnit}
+                y2={line[1].y * pixelsPerUnit}
+                className="stroke-foreground"
+              />
+            ) : undefined}
           </svg>
         )}
       </DraggableProvider>
