@@ -1,7 +1,7 @@
-import { useWatch, type UseFormReturn } from "react-hook-form";
+import { useWatch, type Path, type UseFormReturn } from "react-hook-form";
 import type { SchemaObjectDescription } from "yup";
 import { RefField, FlagsField, SpinField, TextField } from "./custom-fields";
-import { AnyForm, AnyField, type AnyFieldProps } from "./generic-form";
+import { AnyForm, AnyField } from "./generic-form";
 import {
   CharacterRecord,
   Weapon,
@@ -10,17 +10,21 @@ import {
   MapSchema,
 } from "./schema";
 
-function ListSelect(
-  props: { listName: "weapon" | "armor" } & AnyFieldProps<SelectForm>
-) {
+export function ListSelectField(props: {
+  listName: Path<any>;
+  form: UseFormReturn<any>;
+  name: Path<any>;
+  label: string;
+  className?: string;
+}) {
   const {
     listName,
     form: { control },
   } = props;
-  const list: { name: string }[] = useWatch({
+  const list = useWatch({
     control,
-    name: `${listName}.list`,
-  });
+    name: `${listName}.list` as Path<any>,
+  }) as { name: string }[];
   return <RefField {...props} optionLabels={list.map((x) => x.name)} />;
 }
 
@@ -40,7 +44,7 @@ export function CharacterForm(props: {
             return <SpinField key={key} {...props} />;
           case "weapon":
           case "armor":
-            return <ListSelect key={key} {...props} listName={fName} />;
+            return <ListSelectField key={key} {...props} listName={fName} />;
           case "conditions":
           case "gifts":
           case "activeGifts": {

@@ -1,15 +1,14 @@
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "./components/ui/select";
-import type { FieldValues, UseFormReturn, Path } from "react-hook-form";
+  type FieldValues,
+  type UseFormReturn,
+  type Path,
+  useWatch,
+} from "react-hook-form";
 import type { SchemaFieldDescription, SchemaObjectDescription } from "yup";
 import { Button } from "./components/ui/button";
-import { FormField, FormItem, FormControl } from "./components/ui/form";
 import { EnumField, TextField, BoolField } from "./custom-fields";
+import { ListSelect } from "./schema";
+import { ListSelectField } from "./custom-forms";
 
 export function AnyField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
@@ -124,9 +123,10 @@ export function ObjectEditor(props: {
   newItem: (this: void, newIdx: number) => { name: string };
 }) {
   const { form, prefix, children, newItem } = props;
-  const { list, idx } = form.getValues()[prefix] as ListSelect<{
-    name: string;
-  }>;
+  const idx = useWatch({
+    control: form.control,
+    name: `${prefix}.idx`,
+  }) as number;
 
   function setIdx(newIdx: number) {
     form.setValue(`${prefix}.idx`, newIdx);
@@ -136,6 +136,7 @@ export function ObjectEditor(props: {
   }
 
   function create() {
+    const list = form.getValues(`${prefix}.list`) as unknown[];
     const newIdx = list.length;
     form.setValue(`${prefix}.list.${newIdx}`, newItem(newIdx));
     setIdx(newIdx);
@@ -144,32 +145,12 @@ export function ObjectEditor(props: {
   return (
     <>
       <div className="flex gap-2">
-        <FormField
+        <ListSelectField
           name={`${prefix}.idx`}
-          control={form.control}
-          render={({ field }) => (
-            <FormItem className="flex-1">
-              <FormControl>
-                <Select
-                  disabled={field.disabled}
-                  name={field.name}
-                  value={String(field.value)}
-                  onValueChange={(x) => setIdx(Number(x))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {list.map((x, i) => (
-                      <SelectItem key={i} value={String(i)}>
-                        {x.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormControl>
-            </FormItem>
-          )}
+          listName={prefix}
+          form={form}
+          label=""
+          className="flex-1"
         />
         <Button onClick={create}>New</Button>
         <Button>Delete</Button>

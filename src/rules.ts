@@ -7,6 +7,7 @@ import {
   Range,
   Cover,
   WoundState,
+  getPos,
 } from "./schema";
 
 function getRange(params: { attacker: Character; defender: Character }): {
@@ -14,8 +15,8 @@ function getRange(params: { attacker: Character; defender: Character }): {
   distance: number;
 } {
   const { attacker, defender } = params;
-  const { x: x1, y: y1 } = attacker.position;
-  const { x: x2, y: y2 } = defender.position;
+  const { x: x1, y: y1 } = getPos(attacker);
+  const { x: x2, y: y2 } = getPos(defender);
   const dx = x1 - x2;
   const dy = y1 - y2;
   const distance = Math.ceil(Math.sqrt(dx * dx + dy + dy));

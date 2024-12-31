@@ -12,7 +12,12 @@ import {
   type SVGProps,
 } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
-import type { CharacterRecord, MarkerType, SelectForm } from "./schema";
+import {
+  getPos,
+  type CharacterRecord,
+  type MarkerType,
+  type SelectForm,
+} from "./schema";
 import { MapForm } from "./custom-forms";
 
 const DraggableContext = createContext<{
@@ -207,9 +212,10 @@ function CharMarker(
   } & ComponentProps<"g">
 ) {
   const { idx, character, snap, pixelsPerUnit, form, ...gProps } = props;
+  const position = getPos(character);
 
-  const px = character.position.x * pixelsPerUnit;
-  const py = character.position.y * pixelsPerUnit;
+  const px = position.x * pixelsPerUnit;
+  const py = position.y * pixelsPerUnit;
 
   return (
     <DraggableSVG
@@ -268,7 +274,7 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
   const attacker = characters[combat.attacker];
   const defender = characters[combat.defender];
   const line =
-    attacker && defender ? [attacker.position, defender.position] : undefined;
+    attacker && defender ? [getPos(attacker), getPos(defender)] : undefined;
 
   return (
     <>

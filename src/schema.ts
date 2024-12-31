@@ -143,6 +143,7 @@ export const CharacterRecord = yup.object({
       x: yup.number().required().label("X"),
       y: yup.number().required().label("Y"),
     })
+    .optional()
     .label("Position"),
   color: yup.string().label("Color"),
   marker: enumOf(["Circle", "Cross", "Triangle", "Square", "Star"])
@@ -150,6 +151,10 @@ export const CharacterRecord = yup.object({
     .label("Marker"),
 });
 export type CharacterRecord = yup.InferType<typeof CharacterRecord>;
+
+export function getPos(c: CharacterRecord | Character) {
+  return c.position || { x: 1, y: 1 };
+}
 
 export type MarkerType = CharacterRecord["marker"];
 

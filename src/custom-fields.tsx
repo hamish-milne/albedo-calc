@@ -130,23 +130,21 @@ export function EnumField<
 
   return (
     <FormFieldContext.Provider value={{ name }}>
-      <fieldset>
-        <div className={cn("flex flex-col gap-2", className)}>
-          <FormLegend>{label}</FormLegend>
-          <ToggleGroup options={options}>
-            {(value, idx) => (
-              <RadioButton
-                key={value}
-                type="single"
-                {...form.register(name)}
-                value={value}
-                label={optionLabels?.(value, idx) || value}
-              />
-            )}
-          </ToggleGroup>
-          <FormMessage />
-        </div>
-      </fieldset>
+      <div className={cn("flex flex-col gap-2", className)}>
+        <FormLegend>{label}</FormLegend>
+        <ToggleGroup options={options}>
+          {(value, idx) => (
+            <RadioButton
+              key={value}
+              type="single"
+              {...form.register(name)}
+              value={value}
+              label={optionLabels?.(value, idx) || value}
+            />
+          )}
+        </ToggleGroup>
+        <FormMessage />
+      </div>
     </FormFieldContext.Provider>
   );
 }
@@ -199,8 +197,8 @@ export function RefField<TFieldValues extends FieldValues>(props: {
       control={form.control}
       name={name}
       render={({ field }) => (
-        <FormItem>
-          <FormLabel>{label}</FormLabel>
+        <FormItem className={className}>
+          {label ? <FormLabel>{label}</FormLabel> : undefined}
           <Select
             disabled={field.disabled}
             name={field.name}
@@ -208,7 +206,7 @@ export function RefField<TFieldValues extends FieldValues>(props: {
             onValueChange={(x) => field.onChange(Number(x))}
           >
             <FormControl>
-              <SelectTrigger className={className}>
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
             </FormControl>

@@ -35,14 +35,14 @@ function ToggleGroup<TOption = string>(props: {
 }) {
   const { options, children, className } = props;
   return (
-    <div
+    <fieldset
       className={cn(
         "flex flex-wrap items-center justify-center gap-1 *:flex-1",
         className
       )}
     >
       {options.map(children)}
-    </div>
+    </fieldset>
   );
 }
 
