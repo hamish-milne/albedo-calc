@@ -46,18 +46,40 @@ function getCharacter(
 }
 
 function trySetupCombat(form: UseFormReturn<SelectForm>) {
-  const inProgress = useWatch({ control: form.control, name: "setup" });
+  const inProgress = useWatch({
+    control: form.control,
+    name: "setup",
+    defaultValue: {},
+  });
   const characters = useWatch({
     control: form.control,
     name: "character.list",
   });
-  const weapons = useWatch({ control: form.control, name: "weapon.list" });
-  const armor = useWatch({ control: form.control, name: "armor.list" });
+  const weapons = useWatch({
+    control: form.control,
+    name: "weapon.list",
+    defaultValue: [],
+  });
+  const armor = useWatch({
+    control: form.control,
+    name: "armor.list",
+    defaultValue: [],
+  });
 
   try {
     return {
-      attacker: getCharacter(inProgress.attacker, characters, weapons, armor),
-      defender: getCharacter(inProgress.defender, characters, weapons, armor),
+      attacker: getCharacter(
+        inProgress.attacker ?? -1,
+        characters,
+        weapons,
+        armor
+      ),
+      defender: getCharacter(
+        inProgress.defender ?? -1,
+        characters,
+        weapons,
+        armor
+      ),
     };
   } catch (e) {
     return e instanceof Error ? e.message : String(e);

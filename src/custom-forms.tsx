@@ -24,6 +24,7 @@ export function ListSelectField(props: {
   const list = useWatch({
     control,
     name: `${listName}.list` as Path<any>,
+    defaultValue: [],
   }) as { name: string }[];
   return <RefField {...props} optionLabels={list.map((x) => x.name)} />;
 }

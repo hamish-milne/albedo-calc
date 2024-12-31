@@ -160,6 +160,7 @@ function Marker(
   const { type, size, ref, ...svgProps } = props;
   const r = size / 2;
   switch (type) {
+    default:
     case "Circle":
       return <circle ref={ref} r={r} {...svgProps} />;
     case "Square":
@@ -197,8 +198,6 @@ function Marker(
           strokeWidth={Number(svgProps.strokeWidth || 1) / 0.3}
         />
       );
-    default:
-      return <></>;
   }
 }
 
@@ -240,7 +239,7 @@ function CharMarker(
             size={10}
             fill={character.color}
             className="stroke-foreground cursor-move"
-            type={character.marker || "Circle"}
+            type={character.marker}
           />
           <text
             y={-20}
@@ -260,19 +259,25 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
   const characters = useWatch({
     control: form.control,
     name: "character.list",
+    defaultValue: [],
   });
-  const combat = useWatch({ control: form.control, name: "setup" }) || {};
+  const combat = useWatch({
+    control: form.control,
+    name: "setup",
+    defaultValue: {},
+  });
 
   const { width, height, ...config } = useWatch({
     control: form.control,
     name: "map",
+    defaultValue: {},
   });
   const pixelsPerUnit = config.pixelsPerUnit || 20;
   const snap = (config.snap || 1) * pixelsPerUnit;
   const gridCellSize = (config.gridCellSize || 1) * pixelsPerUnit;
 
-  const attacker = characters[combat.attacker];
-  const defender = characters[combat.defender];
+  const attacker = characters[combat.attacker ?? -1];
+  const defender = characters[combat.defender ?? -1];
   const line =
     attacker && defender ? [getPos(attacker), getPos(defender)] : undefined;
 

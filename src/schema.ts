@@ -175,8 +175,8 @@ export function ListSelect<C extends yup.Maybe<yup.AnyObject>, T = any>(
 const DiceRoll = yup.array(integer.required()).required();
 
 export const SetupSchema = yup.object({
-  attacker: integer.required().label("Attacker"),
-  defender: integer.required().label("Defender"),
+  attacker: integer.label("Attacker"),
+  defender: integer.label("Defender"),
 });
 
 export const ToHitSchema = yup.object({
@@ -225,6 +225,7 @@ export const DefaultChar: CharacterRecord = {
   woundState: "Uninjured",
   maxCover: "Half",
   concealment: "None",
+  marker: "Circle",
   morale: 5,
   awe: 0,
   conditions: {},
