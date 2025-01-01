@@ -54,6 +54,7 @@ function trySetupCombat(form: UseFormReturn<SelectForm>) {
   const characters = useWatch({
     control: form.control,
     name: "character.list",
+    defaultValue: [],
   });
   const weapons = useWatch({
     control: form.control,

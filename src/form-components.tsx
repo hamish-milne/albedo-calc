@@ -49,7 +49,7 @@ function ToggleGroup<TOption = string>(props: {
 const radioVariants = cva(
   cn(
     "rounded-md text-sm font-medium transition-colors",
-    "hover:bg-muted hover:text-muted-foreground",
+    "hover:ring-1 hover:ring-muted-foreground",
     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
     "disabled:pointer-events-none disabled:opacity-50",
     "checked:bg-accent checked:text-accent-foreground"

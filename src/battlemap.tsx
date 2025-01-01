@@ -37,6 +37,7 @@ export function DraggableProvider(props: {
     onPointerMove: PointerEventHandler;
     onPointerUp: PointerEventHandler;
     onPointerLeave: PointerEventHandler;
+    ref: RefCallback<Element>;
   }) => ReactNode;
 }) {
   const { children } = props;
@@ -49,6 +50,7 @@ export function DraggableProvider(props: {
     if ((e.buttons & (1 << LMOUSE)) === 0) {
       held.current = null;
     }
+    e.preventDefault();
   }
 
   return (
@@ -63,6 +65,10 @@ export function DraggableProvider(props: {
         onPointerMove: update,
         onPointerUp: update,
         onPointerLeave: update,
+        ref: (e) =>
+          e?.addEventListener("touchmove", (e) => e.preventDefault(), {
+            passive: false,
+          }),
       })}
     </DraggableContext.Provider>
   );
@@ -248,7 +254,7 @@ function CharMarker(
           <text
             y={-20}
             textAnchor="middle"
-            className="fill-foreground cursor-default pointer-events-none"
+            className="fill-foreground cursor-default pointer-events-none filter-shadow"
           >
             {character.name}
           </text>
