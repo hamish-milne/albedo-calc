@@ -13,8 +13,8 @@ import {
 } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
 import {
+  DefaultChar,
   getPos,
-  type CharacterRecord,
   type MarkerType,
   type SelectForm,
 } from "./schema";
@@ -204,13 +204,17 @@ function Marker(
 function CharMarker(
   props: {
     idx: number;
-    character: CharacterRecord;
     snap: number;
     pixelsPerUnit: number;
     form: UseFormReturn<SelectForm>;
   } & ComponentProps<"g">
 ) {
-  const { idx, character, snap, pixelsPerUnit, form, ...gProps } = props;
+  const { idx, snap, pixelsPerUnit, form, ...gProps } = props;
+  const character = useWatch({
+    control: form.control,
+    name: `character.list.${idx}`,
+    defaultValue: DefaultChar,
+  });
   const position = getPos(character);
 
   const px = position.x * pixelsPerUnit;
@@ -254,18 +258,44 @@ function CharMarker(
   );
 }
 
-export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
-  const { form } = props;
-  const characters = useWatch({
-    control: form.control,
-    name: "character.list",
-    defaultValue: [],
-  });
+function CombatLine(props: {
+  form: UseFormReturn<SelectForm>;
+  pixelsPerUnit: number;
+}) {
+  const { form, pixelsPerUnit } = props;
+
   const combat = useWatch({
     control: form.control,
     name: "setup",
     defaultValue: {},
   });
+  const characters = useWatch({
+    control: form.control,
+    name: "character.list",
+    defaultValue: [],
+  });
+
+  const attacker = characters[combat.attacker ?? -1];
+  const defender = characters[combat.defender ?? -1];
+  const line =
+    attacker && defender ? [getPos(attacker), getPos(defender)] : undefined;
+
+  return line ? (
+    <line
+      x1={line[0].x * pixelsPerUnit}
+      y1={line[0].y * pixelsPerUnit}
+      x2={line[1].x * pixelsPerUnit}
+      y2={line[1].y * pixelsPerUnit}
+      className="stroke-foreground"
+    />
+  ) : (
+    <></>
+  );
+}
+
+export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
+  const { form } = props;
+  const characters = form.getValues("character.list");
 
   const { width, height, ...config } = useWatch({
     control: form.control,
@@ -275,11 +305,6 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
   const pixelsPerUnit = config.pixelsPerUnit || 20;
   const snap = (config.snap || 1) * pixelsPerUnit;
   const gridCellSize = (config.gridCellSize || 1) * pixelsPerUnit;
-
-  const attacker = characters[combat.attacker ?? -1];
-  const defender = characters[combat.defender ?? -1];
-  const line =
-    attacker && defender ? [getPos(attacker), getPos(defender)] : undefined;
 
   return (
     <>
@@ -308,7 +333,8 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
                   y={0}
                   width={gridCellSize}
                   height={gridCellSize}
-                  className="stroke-gray-500"
+                  fill="none"
+                  className="stroke-gray-300 dark:stroke-gray-500"
                 />
               </pattern>
             </defs>
@@ -319,25 +345,16 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
               height={500}
               fill="url(#battleGrid)"
             />
-            {characters.map((character, idx) => (
+            <CombatLine form={form} pixelsPerUnit={pixelsPerUnit} />
+            {characters.map((_, idx) => (
               <CharMarker
                 key={idx}
                 idx={idx}
-                character={character}
                 snap={snap}
                 pixelsPerUnit={pixelsPerUnit}
                 form={form}
               />
             ))}
-            {line ? (
-              <line
-                x1={line[0].x * pixelsPerUnit}
-                y1={line[0].y * pixelsPerUnit}
-                x2={line[1].x * pixelsPerUnit}
-                y2={line[1].y * pixelsPerUnit}
-                className="stroke-foreground"
-              />
-            ) : undefined}
           </svg>
         )}
       </DraggableProvider>

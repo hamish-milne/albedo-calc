@@ -1,4 +1,4 @@
-import { useWatch, type Path, type UseFormReturn } from "react-hook-form";
+import { type Path, type UseFormReturn } from "react-hook-form";
 import type { SchemaObjectDescription } from "yup";
 import { RefField, FlagsField, SpinField, TextField } from "./custom-fields";
 import { AnyForm, AnyField } from "./generic-form";
@@ -17,15 +17,8 @@ export function ListSelectField(props: {
   label: string;
   className?: string;
 }) {
-  const {
-    listName,
-    form: { control },
-  } = props;
-  const list = useWatch({
-    control,
-    name: `${listName}.list` as Path<any>,
-    defaultValue: [],
-  }) as { name: string }[];
+  const { listName, form } = props;
+  const list: { name: string }[] = form.getValues(`${listName}.list`);
   return <RefField {...props} optionLabels={list.map((x) => x.name)} />;
 }
 

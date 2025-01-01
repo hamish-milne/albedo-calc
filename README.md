@@ -1,50 +1,15 @@
-# React + TypeScript + Vite
+# Albedo Combat Calculator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is a little app to assist with running the infamously-complex combat rules for the Albedo TTRPG.
 
-Currently, two official plugins are available:
+It can be accessed [here](https://hamish-milne.github.io/albedo-calc/), or you can download [the HTML bundle](/docs/index.html) and run it locally.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+It has:
 
-## Expanding the ESLint configuration
+- character sheets
+- built-in and custom weapons and armour
+- a drag-and-drop map grid for range calculations
+- both automatic and manual dice rolling
+- a combat log
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
-
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
-
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+All data is saved to Local Storage, but you can save everything to a JSON file and load it back later with the Export dialog at the bottom.

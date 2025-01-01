@@ -1,12 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import "./App.css";
-import { ThemeProvider } from "./components/theme-provider";
+import {
+  systemTheme,
+  ThemeProvider,
+  useTheme,
+} from "./components/theme-provider";
 import { Form } from "./components/ui/form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
 import { DefaultArmor, DefaultWeapons } from "./rules";
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ComponentProps, type ReactNode } from "react";
 import { SelectForm, DefaultChar } from "./schema";
 import {
   Accordion,
@@ -20,6 +22,35 @@ import { CombatForm } from "./combat-form";
 import { CharacterForm, WeaponForm, ArmorForm } from "./custom-forms";
 import { ExportDialog } from "./export-dialog";
 import { BattleMap } from "./battlemap";
+import { cn } from "./lib/utils";
+import { Button } from "./components/ui/button";
+import { Sun, Moon } from "lucide-react";
+
+export function TypographyH3(props: ComponentProps<"h3">) {
+  const { className, ...cProps } = props;
+  return (
+    <h3
+      className={cn(
+        "scroll-m-20 text-2xl font-semibold tracking-tight",
+        className
+      )}
+      {...cProps}
+    />
+  );
+}
+
+export function TypographyH2(props: ComponentProps<"h2">) {
+  const { className, ...cProps } = props;
+  return (
+    <h2
+      className={cn(
+        "scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0",
+        className
+      )}
+      {...cProps}
+    />
+  );
+}
 
 function TopLevelItem(props: {
   value: string;
@@ -162,11 +193,32 @@ function Main() {
   );
 }
 
+function Title() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <TypographyH2 className="flex justify-between">
+      Hamish's Albedo Combat Calculator
+      <Button
+        variant="secondary"
+        size="icon"
+        aria-label="Toggle theme"
+        onClick={() => {
+          const current = theme === "system" ? systemTheme() : theme;
+          setTheme(current === "dark" ? "light" : "dark");
+        }}
+      >
+        <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+        <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      </Button>
+    </TypographyH2>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider defaultTheme="dark">
       <div className="max-w-xl flex flex-col gap-3 m-auto">
-        <h1 className="text-2xl">Hamish's Albedo Combat Calculator</h1>
+        <Title />
         <Main />
       </div>
     </ThemeProvider>

@@ -123,6 +123,7 @@ export function CombatLog(props: {
                 variant="ghost"
                 size="icon"
                 onClick={() => deleteItem(idx)}
+                aria-label="Delete log item"
               >
                 <X className="text-destructive" />
               </Button>

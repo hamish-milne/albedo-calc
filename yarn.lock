@@ -2068,6 +2068,7 @@ __metadata:
     typescript: "npm:~5.7.2"
     typescript-eslint: "npm:^8.18.1"
     vite: "npm:^6.0.3"
+    vite-bundle-analyzer: "npm:^0.15.2"
     vite-plugin-singlefile: "npm:^2.1.0"
     yup: "npm:^1.6.1"
   languageName: unknown
@@ -5498,6 +5499,15 @@ __metadata:
   version: 1.0.2
   resolution: "util-deprecate@npm:1.0.2"
   checksum: 10c0/41a5bdd214df2f6c3ecf8622745e4a366c4adced864bc3c833739791aeeeb1838119af7daed4ba36428114b5c67dcda034a79c882e97e43c03e66a4dd7389942
+  languageName: node
+  linkType: hard
+
+"vite-bundle-analyzer@npm:^0.15.2":
+  version: 0.15.2
+  resolution: "vite-bundle-analyzer@npm:0.15.2"
+  bin:
+    analyze: dist/bin.js
+  checksum: 10c0/8fd3c6e34cca1f9737f252fbfd7085f30ad0054672242ed1d84d180ae1312c545efe7abc915d2b7a1adb2d7f27c35f126c5687c1ef9ad9f716368680ed4aa005
   languageName: node
   linkType: hard
 

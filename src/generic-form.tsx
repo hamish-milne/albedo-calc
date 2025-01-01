@@ -9,6 +9,15 @@ import { Button } from "./components/ui/button";
 import { EnumField, TextField, BoolField } from "./custom-fields";
 import { ListSelect } from "./schema";
 import { ListSelectField } from "./custom-forms";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogContent,
+  DialogFooter,
+} from "./components/ui/dialog";
+import { useState } from "react";
 
 export function AnyField<TFieldValues extends FieldValues>(props: {
   form: UseFormReturn<TFieldValues>;
@@ -128,6 +137,8 @@ export function ObjectEditor(props: {
     name: `${prefix}.idx`,
   }) as number;
 
+  const [open, setOpen] = useState(false);
+
   function setIdx(newIdx: number) {
     form.setValue(`${prefix}.idx`, newIdx);
     form.reset(undefined, {
@@ -142,6 +153,19 @@ export function ObjectEditor(props: {
     setIdx(newIdx);
   }
 
+  function remove() {
+    const list = form.getValues(`${prefix}.list`) as unknown[];
+    if (idx > 0 && idx < list.length) {
+      const newList = [...list];
+      newList.splice(idx, 1);
+      form.setValue(`${prefix}.list`, newList);
+      if (idx >= newList.length) {
+        setIdx(newList.length - 1);
+      }
+    }
+    setOpen(false);
+  }
+
   return (
     <>
       <div className="flex gap-2">
@@ -153,7 +177,22 @@ export function ObjectEditor(props: {
           className="flex-1"
         />
         <Button onClick={create}>New</Button>
-        <Button>Delete</Button>
+
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="destructive">Delete</Button>
+          </DialogTrigger>
+          <DialogContent aria-describedby={undefined}>
+            <DialogHeader>
+              <DialogTitle>Are you sure?</DialogTitle>
+            </DialogHeader>
+            <DialogFooter className="sm:justify-start">
+              <Button variant="destructive" onClick={remove}>
+                Delete selected {prefix}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
       {children(`${prefix}.list.${idx}`)}
     </>

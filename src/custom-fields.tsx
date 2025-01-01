@@ -62,11 +62,21 @@ function SpinFieldSlot<TFieldValues extends FieldValues>(
 
   return (
     <div className="flex gap-1">
-      <Button variant="secondary" size="icon" onClick={dec}>
+      <Button
+        variant="secondary"
+        size="icon"
+        onClick={dec}
+        aria-label="Decrement"
+      >
         <Minus />
       </Button>
       <Input {...inputProps} {...form.register(name)} />
-      <Button variant="secondary" size="icon" onClick={inc}>
+      <Button
+        variant="secondary"
+        size="icon"
+        onClick={inc}
+        aria-label="Increment"
+      >
         <Plus />
       </Button>
     </div>
@@ -164,22 +174,20 @@ export function FlagsField<
 
   return (
     <FormFieldContext.Provider value={{ name }}>
-      <fieldset>
-        <div className={cn("flex flex-col gap-2", className)}>
-          <FormLegend>{label}</FormLegend>
-          <ToggleGroup options={fields}>
-            {(value, idx) => (
-              <RadioButton
-                key={value}
-                type="multiple"
-                {...form.register(`${name}.${value}` as Path<TFieldValues>)}
-                label={fieldLabels?.(value, idx) || value}
-              />
-            )}
-          </ToggleGroup>
-          <FormMessage />
-        </div>
-      </fieldset>
+      <div className={cn("flex flex-col gap-2", className)}>
+        <FormLegend>{label}</FormLegend>
+        <ToggleGroup options={fields}>
+          {(value, idx) => (
+            <RadioButton
+              key={value}
+              type="multiple"
+              {...form.register(`${name}.${value}` as Path<TFieldValues>)}
+              label={fieldLabels?.(value, idx) || value}
+            />
+          )}
+        </ToggleGroup>
+        <FormMessage />
+      </div>
     </FormFieldContext.Provider>
   );
 }
@@ -206,7 +214,7 @@ export function RefField<TFieldValues extends FieldValues>(props: {
             onValueChange={(x) => field.onChange(Number(x))}
           >
             <FormControl>
-              <SelectTrigger>
+              <SelectTrigger aria-label={label || "Drop-down button"}>
                 <SelectValue />
               </SelectTrigger>
             </FormControl>
