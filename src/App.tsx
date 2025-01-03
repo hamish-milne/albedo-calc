@@ -7,9 +7,14 @@ import {
 import { Form } from "./components/ui/form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
-import { DefaultArmor, DefaultWeapons } from "./rules";
+import {
+  DefaultArmor,
+  DefaultWeapons,
+  DefaultChar,
+  DefaultValues,
+} from "./data";
 import { useEffect, useMemo, type ComponentProps, type ReactNode } from "react";
-import { SelectForm, DefaultChar } from "./schema";
+import { SelectForm } from "./schema";
 import {
   Accordion,
   AccordionContent,
@@ -72,44 +77,14 @@ function Main() {
   const form = useForm<SelectForm>({
     mode: "onBlur",
     resolver: yupResolver(SelectForm),
-    defaultValues: {
-      character: {
-        list: [],
-        idx: 0,
-      },
-      weapon: { list: [], idx: 0 },
-      armor: { list: [], idx: 0 },
-      toHit: {
-        attackRoll: [],
-        defenseRoll: [],
-      },
-      resolve: {
-        damageRoll: [],
-      },
-      map: {
-        width: 25,
-        height: 25,
-        gridCellSize: 1,
-        snap: 1,
-        pixelsPerUnit: 20,
-      },
-    },
+    defaultValues: DefaultValues,
   });
 
   useEffect(() => {
     const data = localStorage.getItem("data");
     const values: SelectForm = data
       ? JSON.parse(data)
-      : {
-          character: {
-            list: [DefaultChar],
-            idx: "0",
-          },
-          weapon: { list: [...DefaultWeapons], idx: "0" },
-          armor: { list: [...DefaultArmor], idx: "0" },
-          toHit: { attackRoll: [], defenseRoll: [] },
-          resolve: { damageRoll: [] },
-        };
+      : structuredClone(DefaultValues);
     form.reset(values);
   }, [form]);
 

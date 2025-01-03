@@ -206,30 +206,3 @@ export const SelectForm = yup.object({
   resolve: ResolveSchema,
 });
 export type SelectForm = yup.InferType<typeof SelectForm>;
-
-export const DefaultChar: CharacterRecord = {
-  name: "Donut Steele",
-  body: 7,
-  injury: 0,
-  weapon: 0,
-  marks: {
-    Brawl: 0,
-    Heavy: 0,
-    Longarm: 0,
-    Melee: 0,
-    Pistol: 0,
-    Throw: 0,
-  },
-  mode: "Roll",
-  armor: 0,
-  woundState: "Uninjured",
-  maxCover: "Half",
-  concealment: "None",
-  marker: "Circle",
-  morale: 5,
-  awe: 0,
-  conditions: {},
-  gifts: {},
-  activeGifts: {},
-  position: { x: 1, y: 1 },
-};

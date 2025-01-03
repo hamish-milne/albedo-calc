@@ -146,6 +146,7 @@ function DiceGroup(props: {
             form={form}
             label={`d${d}`}
             name={`${prefix}.${i}` as Path<SelectForm>}
+            inputMode="numeric"
           />
         ))}
         <Button className="self-end" onClick={rollForMe}>

@@ -38,6 +38,9 @@ export function AnyField<TFieldValues extends FieldValues>(props: {
   }
   switch (type.type) {
     case "number":
+      return (
+        <TextField form={form} name={name} label={label} inputMode="numeric" />
+      );
     case "string":
       return <TextField form={form} name={name} label={label} />;
     case "boolean":

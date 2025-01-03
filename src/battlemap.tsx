@@ -12,13 +12,9 @@ import {
   type SVGProps,
 } from "react";
 import { useWatch, type UseFormReturn } from "react-hook-form";
-import {
-  DefaultChar,
-  getPos,
-  type MarkerType,
-  type SelectForm,
-} from "./schema";
+import { getPos, type MarkerType, type SelectForm } from "./schema";
 import { MapForm } from "./custom-forms";
+import { DefaultChar } from "./data";
 
 const DraggableContext = createContext<{
   setHeld: (el: DragHandler) => void;
@@ -153,6 +149,7 @@ export function DraggableSVG<TEl extends SVGGraphicsElement>(props: {
 }
 
 function toNearest(raw: number, bin: number) {
+  bin = Math.max(bin, 0.01);
   return Math.round(raw / bin) * bin;
 }
 
@@ -226,6 +223,9 @@ function CharMarker(
   const px = position.x * pixelsPerUnit;
   const py = position.y * pixelsPerUnit;
 
+  const markerSize = 10;
+  const dragRegionSize = markerSize + 8;
+
   return (
     <DraggableSVG
       handler={(e, _svg, pos) => {
@@ -248,7 +248,7 @@ function CharMarker(
           <Marker
             size={10}
             fill={character.color}
-            className="stroke-foreground cursor-move"
+            className="stroke-foreground"
             type={character.marker}
           />
           <text
@@ -258,6 +258,14 @@ function CharMarker(
           >
             {character.name}
           </text>
+          <rect
+            x={-dragRegionSize / 2}
+            y={-dragRegionSize / 2}
+            width={dragRegionSize}
+            height={dragRegionSize}
+            fill="none"
+            className="cursor-move pointer-events-bounding-box"
+          />
         </g>
       )}
     </DraggableSVG>
