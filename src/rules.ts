@@ -8,6 +8,10 @@ import {
   getPos,
 } from "./schema";
 
+import { vec2, glMatrix } from "gl-matrix";
+
+glMatrix.setMatrixArrayType(Array);
+
 function getRange(params: { attacker: Character; defender: Character }): {
   range: Range;
   distance: number;
@@ -29,6 +33,13 @@ function getRange(params: { attacker: Character; defender: Character }): {
 }
 
 export type AttackResult = "Miss" | "Tie" | "Hit" | "Crit";
+
+export type Circle = { c: vec2; r: number };
+
+export type ThrowResult = { maximum: Circle; target: Circle };
+export type EXResult = Circle;
+
+export type AttackOrThrowResult = AttackResult | ThrowResult | EXResult;
 
 function marksToDice(x: number): number {
   if (x < 1) {
@@ -171,7 +182,7 @@ function getDefenseDice(params: {
   return dice;
 }
 
-function getResult(params: {
+function getAttackResult(params: {
   attacker: Character;
   attackRoll: number | number[];
   defenseDice: AttackResult | number[];
@@ -205,15 +216,104 @@ function getResult(params: {
   return "Hit";
 }
 
+function clampDistance(a: vec2, b: vec2, r: number): [vec2, number] {
+  const dist = vec2.distance(a, b);
+  if (dist <= r) {
+    return [b, dist];
+  }
+  return [vec2.lerp([0, 0], a, b, r / dist), r];
+}
+
+function posAsVec(c: Character): vec2 {
+  return [c.position?.x || 0, c.position?.y || 0];
+}
+
+function getThrowResult(params: {
+  attacker: Character;
+  defender: Character;
+  attackRoll: number | number[];
+}): ThrowResult {
+  const { attacker, defender, attackRoll } = params;
+
+  const maxDistance = attacker.body * 4;
+  const aPos = posAsVec(attacker);
+  const dPos = posAsVec(defender);
+  const [clamped, actualDistance] = clampDistance(aPos, dPos, maxDistance);
+
+  const roll = typeof attackRoll === "number" ? [attackRoll] : attackRoll;
+  const maxRoll = Math.min(7, Math.max(...roll));
+  const deviationRatio = 0.7 - 0.1 * maxRoll;
+  const deviationDistance = actualDistance * deviationRatio;
+
+  return {
+    maximum: { c: aPos, r: maxDistance },
+    target: { c: clamped, r: deviationDistance },
+  };
+}
+
+function getEXResult(params: {
+  attacker: Character;
+  defender: Character;
+  attackRoll: number | number[];
+  defenseDice: AttackResult | number[];
+  defenseRoll: number[];
+}): AttackResult | EXResult {
+  const { attacker, defender, attackRoll, defenseDice, defenseRoll } = params;
+
+  if (defenseDice === "Hit" || defenseDice === "Crit") {
+    return { c: posAsVec(defender), r: attacker.weapon.explosion || 0 };
+  }
+  if (typeof defenseDice === "string") {
+    return defenseDice;
+  }
+  const roll = typeof attackRoll === "number" ? [attackRoll] : attackRoll;
+  const atkValue = Math.max(...roll);
+  const deviation = Math.max(0, Math.max(...defenseRoll) - atkValue) * 6;
+  const angle =
+    atkValue % 1 === 0
+      ? atkValue % 3 === 0
+        ? 0.5
+        : 1
+      : atkValue !== 12 && atkValue % 4 === 0
+        ? -0.5
+        : 0;
+  const aPos = posAsVec(attacker);
+  const dPos = posAsVec(defender);
+  const targetPoint = vec2.lerp(
+    [0, 0],
+    aPos,
+    dPos,
+    1 + deviation / vec2.distance(aPos, dPos)
+  );
+  const newPoint = vec2.rotate([0, 0], targetPoint, dPos, angle * Math.PI);
+  return { c: newPoint, r: 1 };
+}
+
+function getResult(params: {
+  attacker: Character;
+  defender: Character;
+  attackRoll: number | number[];
+  defenseDice: AttackResult | number[];
+  defenseRoll: number[];
+}) {
+  const { attacker } = params;
+  if (attacker.weapon.explosion) {
+    return attacker.weapon.skill === "Throw"
+      ? getThrowResult(params)
+      : getEXResult(params);
+  }
+  return getAttackResult(params);
+}
+
 function getDamageDiceCount(params: {
   attacker: Character;
   defender: Character;
-  result: AttackResult;
+  result: AttackOrThrowResult;
   range: Range;
   woundState: WoundState;
 }): number {
   const { attacker, defender, result, range, woundState } = params;
-  if (result === "Miss" || result === "Tie") {
+  if (typeof result !== "string" || result === "Miss" || result === "Tie") {
     return 0;
   }
   let total: number;

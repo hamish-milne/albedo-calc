@@ -280,6 +280,10 @@ function CombatResolve(props: {
       }
     : undefined;
 
+  if (typeof result.result !== "string") {
+    return <>TODO!</>;
+  }
+
   return (
     <>
       <p>
@@ -296,6 +300,7 @@ function CombatResolve(props: {
           form={form}
           addItem={addItem}
           {...result}
+          result={result.result as AttackResult}
           {...resolvedFixed}
         />
       ) : (
