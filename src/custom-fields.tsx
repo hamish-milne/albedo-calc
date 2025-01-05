@@ -1,4 +1,9 @@
-import type { FieldValues, UseFormReturn, Path } from "react-hook-form";
+import type {
+  FieldValues,
+  UseFormReturn,
+  Path,
+  PathValue,
+} from "react-hook-form";
 import {
   FormControl,
   FormField,
@@ -52,12 +57,13 @@ function SpinFieldSlot<TFieldValues extends FieldValues>(
   } & Omit<ComponentProps<"input">, "form">
 ) {
   const { form, name, ...inputProps } = props;
+  type TValue = PathValue<TFieldValues, Path<TFieldValues>>;
 
   function inc() {
-    form.setValue(name, (Number(form.getValues(name)) + 1) as any);
+    form.setValue(name, (Number(form.getValues(name)) + 1) as TValue);
   }
   function dec() {
-    form.setValue(name, (Number(form.getValues(name)) - 1) as any);
+    form.setValue(name, (Number(form.getValues(name)) - 1) as TValue);
   }
 
   return (
@@ -226,6 +232,7 @@ export function RefField<TFieldValues extends FieldValues>(props: {
               ))}
             </SelectContent>
           </Select>
+          <FormMessage />
         </FormItem>
       )}
     />

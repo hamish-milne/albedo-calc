@@ -7,7 +7,6 @@ import {
 import type { SchemaFieldDescription, SchemaObjectDescription } from "yup";
 import { Button } from "./components/ui/button";
 import { EnumField, TextField, BoolField } from "./custom-fields";
-import { ListSelect } from "./schema";
 import { ListSelectField } from "./custom-forms";
 import {
   Dialog,
@@ -129,6 +128,7 @@ export function AnyForm<TFieldValues extends FieldValues>(props: {
 export type ListSelect<T> = { list: T[]; idx: number };
 
 export function ObjectEditor(props: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>;
   prefix: string;
   children: (this: void, prefix: string) => JSX.Element;

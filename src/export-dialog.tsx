@@ -17,15 +17,11 @@ function ExportContent(props: { form: UseFormReturn<SelectForm> }) {
 
   const textArea = useRef<HTMLTextAreaElement>(null);
 
-  function load() {
+  useEffect(() => {
     if (textArea.current) {
       textArea.current.value = JSON.stringify(form.getValues(), undefined, 2);
     }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
+  }, [textArea, form]);
 
   function save() {
     if (textArea.current) {

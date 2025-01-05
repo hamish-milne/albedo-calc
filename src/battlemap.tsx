@@ -14,7 +14,9 @@ import {
 import { useWatch, type UseFormReturn } from "react-hook-form";
 import { getPos, type MarkerType, type SelectForm } from "./schema";
 import { MapForm } from "./custom-forms";
-import { DefaultChar } from "./data";
+import { DefaultChar, DefaultValues } from "./data";
+import { Step, useCalcs } from "./calc-provider";
+import type { Circle } from "./rules";
 
 const DraggableContext = createContext<{
   setHeld: (el: DragHandler) => void;
@@ -307,6 +309,72 @@ function CombatLine(props: {
   );
 }
 
+function DrawCircle(
+  props: {
+    def: Circle;
+    pixelsPerUnit: number;
+  } & ComponentProps<"circle">
+) {
+  const { def, pixelsPerUnit, ...cProps } = props;
+  return (
+    <circle
+      cx={def.c[0] * pixelsPerUnit}
+      cy={def.c[1] * pixelsPerUnit}
+      r={def.r * pixelsPerUnit}
+      {...cProps}
+    />
+  );
+}
+
+function ExplosionMarkers(props: {
+  form: UseFormReturn<SelectForm>;
+  pixelsPerUnit: number;
+}) {
+  const { form, pixelsPerUnit } = props;
+  const values = useWatch({
+    control: form.control,
+    defaultValue: DefaultValues,
+  }) as SelectForm;
+  const calcs = useCalcs(values);
+
+  if (calcs.step !== Step.Explosion) {
+    return <></>;
+  }
+  const { explosion } = calcs;
+  // TODO: Remove the below? only happens when using a bad roll type. Should be an error instead!
+  if (typeof explosion === "string") {
+    return <></>;
+  }
+
+  if ("maximum" in explosion) {
+    return (
+      <>
+        <DrawCircle
+          def={explosion.maximum}
+          pixelsPerUnit={pixelsPerUnit}
+          fill="green"
+          opacity={0.2}
+        />
+        <DrawCircle
+          def={explosion.target}
+          pixelsPerUnit={pixelsPerUnit}
+          fill="red"
+          opacity={0.2}
+        />
+      </>
+    );
+  } else {
+    return (
+      <DrawCircle
+        def={explosion}
+        pixelsPerUnit={pixelsPerUnit}
+        fill="red"
+        opacity={0.2}
+      />
+    );
+  }
+}
+
 export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
   const { form } = props;
   const characters = form.getValues("character.list");
@@ -369,6 +437,7 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
                 form={form}
               />
             ))}
+            <ExplosionMarkers form={form} pixelsPerUnit={pixelsPerUnit} />
           </svg>
         )}
       </DraggableProvider>

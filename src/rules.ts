@@ -21,7 +21,7 @@ function getRange(params: { attacker: Character; defender: Character }): {
   const { x: x2, y: y2 } = getPos(defender);
   const dx = x1 - x2;
   const dy = y1 - y2;
-  const distance = Math.ceil(Math.sqrt(dx * dx + dy + dy));
+  const distance = Math.ceil(Math.sqrt(dx * dx + dy * dy));
   const { ranges } = attacker.weapon;
   for (let i = 0; i < WeaponRangeNames.length; i++) {
     const range = ranges[WeaponRangeNames[i]];
@@ -228,6 +228,10 @@ function posAsVec(c: Character): vec2 {
   return [c.position?.x || 0, c.position?.y || 0];
 }
 
+function round(v: vec2, p: number = 100): vec2 {
+  return [Math.round(v[0] * p) / p, Math.round(v[1] * p) / p];
+}
+
 function getThrowResult(params: {
   attacker: Character;
   defender: Character;
@@ -247,7 +251,7 @@ function getThrowResult(params: {
 
   return {
     maximum: { c: aPos, r: maxDistance },
-    target: { c: clamped, r: deviationDistance },
+    target: { c: round(clamped), r: deviationDistance },
   };
 }
 
@@ -255,12 +259,12 @@ function getEXResult(params: {
   attacker: Character;
   defender: Character;
   attackRoll: number | number[];
-  defenseDice: AttackResult | number[];
+  defenseDice: "Hit" | "Miss" | number[];
   defenseRoll: number[];
-}): AttackResult | EXResult {
+}): "Miss" | EXResult {
   const { attacker, defender, attackRoll, defenseDice, defenseRoll } = params;
 
-  if (defenseDice === "Hit" || defenseDice === "Crit") {
+  if (defenseDice === "Hit") {
     return { c: posAsVec(defender), r: attacker.weapon.explosion || 0 };
   }
   if (typeof defenseDice === "string") {
@@ -286,23 +290,24 @@ function getEXResult(params: {
     1 + deviation / vec2.distance(aPos, dPos)
   );
   const newPoint = vec2.rotate([0, 0], targetPoint, dPos, angle * Math.PI);
-  return { c: newPoint, r: 1 };
+  return { c: round(newPoint), r: 1 };
 }
 
-function getResult(params: {
+export function isExplosion(params: { attacker: Character }) {
+  return Boolean(params.attacker.weapon.explosion);
+}
+
+export function getExplosionResult(params: {
   attacker: Character;
   defender: Character;
   attackRoll: number | number[];
-  defenseDice: AttackResult | number[];
+  defenseDice: "Hit" | "Miss" | number[];
   defenseRoll: number[];
 }) {
   const { attacker } = params;
-  if (attacker.weapon.explosion) {
-    return attacker.weapon.skill === "Throw"
-      ? getThrowResult(params)
-      : getEXResult(params);
-  }
-  return getAttackResult(params);
+  return attacker.weapon.skill === "Throw"
+    ? getThrowResult(params)
+    : getEXResult(params);
 }
 
 function getDamageDiceCount(params: {
@@ -425,6 +430,17 @@ function getInjury(params: { defender: Character; newStatus: WoundState }) {
   }
 }
 
+function asNumber<T>(enumObj: unknown, value: unknown): T {
+  const x = isNaN(value as number)
+    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (enumObj as any)[value as string]
+    : Number(value);
+  if (isNaN(x as number)) {
+    throw Error(`Unable to convert ${String(value)}`);
+  }
+  return x as unknown as T;
+}
+
 export function attackSetup(params: {
   attacker: Character;
   defender: Character;
@@ -433,9 +449,9 @@ export function attackSetup(params: {
     ...params,
     attackDice: getAttackDice(params),
     ...getRange(params),
-    maxCover: Cover[params.defender.maxCover],
-    concealment: Cover[params.defender.concealment],
-    woundState: WoundState[params.defender.woundState],
+    maxCover: asNumber<Cover>(Cover, params.defender.maxCover),
+    concealment: asNumber<Cover>(Cover, params.defender.concealment),
+    woundState: asNumber<WoundState>(WoundState, params.defender.woundState),
   };
   return {
     ...a,
@@ -448,13 +464,13 @@ export function attackResolve(params: {
   defender: Character;
   range: Range;
   attackRoll: number | number[];
-  defenseDice: AttackResult | number[];
+  defenseDice: "Hit" | "Miss" | number[];
   defenseRoll: number[];
 }) {
   const a = {
     ...params,
-    result: getResult(params),
-    woundState: WoundState[params.defender.woundState],
+    result: getAttackResult(params),
+    woundState: asNumber<WoundState>(WoundState, params.defender.woundState),
   };
   return {
     ...a,

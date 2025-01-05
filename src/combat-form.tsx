@@ -1,27 +1,15 @@
 import { useEffect } from "react";
 import { type UseFormReturn, type Path, useWatch } from "react-hook-form";
-import type { Schema, InferType } from "yup";
 import type { LogItem } from "./combat-log";
 import { Button } from "./components/ui/button";
 import { TextField, RefField } from "./custom-fields";
-import {
-  attackSetup,
-  type AttackResult,
-  attackResolve,
-  damageResolve,
-  applyResult,
-  getThresholds,
-} from "./rules";
+import { applyResult, getThresholds } from "./rules";
 import {
   Range,
   SelectForm,
   type Character,
   CharacterRecord,
-  Weapon,
-  Armor,
-  ToHitSchema,
   RangeNames,
-  ResolveSchema,
   WoundStateNames,
 } from "./schema";
 import {
@@ -31,61 +19,8 @@ import {
   TableRow,
   TableCell,
 } from "./components/ui/table";
-
-function getCharacter(
-  idx: number,
-  characters: CharacterRecord[],
-  weapons: Weapon[],
-  armors: Armor[]
-): Character {
-  return {
-    ...characters[idx],
-    weapon: weapons[characters[idx].weapon],
-    armor: armors[characters[idx].armor],
-  };
-}
-
-function trySetupCombat(form: UseFormReturn<SelectForm>) {
-  const inProgress = useWatch({
-    control: form.control,
-    name: "setup",
-    defaultValue: {},
-  });
-  const characters = useWatch({
-    control: form.control,
-    name: "character.list",
-    defaultValue: [],
-  });
-  const weapons = useWatch({
-    control: form.control,
-    name: "weapon.list",
-    defaultValue: [],
-  });
-  const armor = useWatch({
-    control: form.control,
-    name: "armor.list",
-    defaultValue: [],
-  });
-
-  try {
-    return {
-      attacker: getCharacter(
-        inProgress.attacker ?? -1,
-        characters,
-        weapons,
-        armor
-      ),
-      defender: getCharacter(
-        inProgress.defender ?? -1,
-        characters,
-        weapons,
-        armor
-      ),
-    };
-  } catch (e) {
-    return e instanceof Error ? e.message : String(e);
-  }
-}
+import { Step, useCalcs, type Calcs } from "./calc-provider";
+import { DefaultValues } from "./data";
 
 function ThresholdsTable(props: { defender: Character }) {
   const { defender } = props;
@@ -157,49 +92,19 @@ function DiceGroup(props: {
   );
 }
 
-function validateSafe<T extends Schema>(
-  schema: T,
-  value: any
-): { success: true; data: InferType<T> } | { success: false; error: unknown } {
-  try {
-    return {
-      success: true,
-      data: schema.validateSync(value),
-    };
-  } catch (error) {
-    return { success: false, error };
-  }
-}
-
 function CombatSetup(props: {
-  attacker: Character;
-  defender: Character;
   form: UseFormReturn<SelectForm>;
-  addItem: (this: void, item: LogItem) => void;
+  result: Calcs;
 }) {
-  const { form, addItem } = props;
-  const result = attackSetup(props);
+  const { form, result } = props;
+
+  if (result.step === Step.Setup) {
+    return <></>;
+  }
 
   if (result.range >= Range.Over) {
     return <p>Out of range!</p>;
   }
-
-  const toHit = validateSafe(
-    ToHitSchema,
-    useWatch({ control: form.control, name: "toHit" })
-  );
-  const toHitFixed = toHit.success
-    ? {
-        attackRoll:
-          typeof result.attackDice === "number"
-            ? result.attackDice
-            : toHit.data.attackRoll.slice(0, result.attackDice.length),
-        defenseRoll:
-          typeof result.defenseDice === "string"
-            ? []
-            : toHit.data.defenseRoll.slice(0, result.defenseDice.length),
-      }
-    : undefined;
 
   return (
     <>
@@ -239,55 +144,29 @@ function CombatSetup(props: {
           dice={result.defenseDice}
         />
       )}
-      {toHitFixed ? (
-        <CombatResolve
-          form={form}
-          addItem={addItem}
-          {...result}
-          range={result.range}
-          {...toHitFixed}
-        />
-      ) : (
-        <p className="text-[0.8rem] font-medium text-destructive">
-          Invalid dice roll values
-        </p>
-      )}
     </>
   );
 }
 
 function CombatResolve(props: {
   form: UseFormReturn<SelectForm>;
-  addItem: (this: void, item: LogItem) => void;
-  attacker: Character;
-  defender: Character;
-  attackRoll: number | number[];
-  defenseRoll: number[];
-  defenseDice: AttackResult | number[];
-  range: Range;
+  calcs: Calcs;
 }) {
-  const { form, addItem } = props;
-  const result = attackResolve(props);
-  const { attacker, defender, damageDiceCount } = result;
-
-  const resolved = validateSafe(
-    ResolveSchema,
-    useWatch({ control: form.control, name: "resolve" })
-  );
-  const resolvedFixed = resolved.success
-    ? {
-        damageRoll: resolved.data.damageRoll.slice(0, damageDiceCount),
-      }
-    : undefined;
-
-  if (typeof result.result !== "string") {
-    return <>TODO!</>;
+  const { form, calcs } = props;
+  if (
+    calcs.step === Step.Setup ||
+    calcs.step === Step.ToHit ||
+    calcs.step === Step.Explosion
+  ) {
+    return <></>;
   }
+
+  const { attacker, defender, result, damageDiceCount } = calcs;
 
   return (
     <>
       <p>
-        {attacker.name} will <b>{result.result}</b> {defender.name}!
+        {attacker.name} will <b>{result}</b> {defender.name}!
       </p>
       <DiceGroup
         dice={Array(damageDiceCount).fill(20)}
@@ -295,19 +174,6 @@ function CombatResolve(props: {
         label="Damage dice"
         prefix="resolve.damageRoll"
       />
-      {resolvedFixed ? (
-        <DamageResolve
-          form={form}
-          addItem={addItem}
-          {...result}
-          result={result.result as AttackResult}
-          {...resolvedFixed}
-        />
-      ) : (
-        <p className="text-[0.8rem] font-medium text-destructive">
-          Invalid dice roll values
-        </p>
-      )}
     </>
   );
 }
@@ -328,33 +194,29 @@ function resetDiceValues(form: UseFormReturn<SelectForm>) {
   ] as const;
   for (const name of names) {
     for (let i = 0; i < 10; i++) {
-      form.setValue(`${name}.${i}`, 0);
+      form.resetField(`${name}.${i}`, { defaultValue: 0 });
     }
   }
 }
 
 function DamageResolve(props: {
   form: UseFormReturn<SelectForm>;
+  calcs: Calcs;
   addItem: (this: void, item: LogItem) => void;
-  attacker: Character;
-  defender: Character;
-  damageRoll: number[];
-  attackRoll: number | number[];
-  defenseRoll: number[];
-  range: Range;
-  result: AttackResult;
 }) {
-  const { form, addItem } = props;
-  const result = damageResolve(props);
-  const { defender, totalDamage, newStatus, awe, injury } = result;
+  const { form, calcs, addItem } = props;
+  if (calcs.step !== Step.DamageResolve) {
+    return <></>;
+  }
+  const { defender, totalDamage, newStatus, awe, injury } = calcs;
 
-  const defenderIdx = useWatch({
-    control: form.control,
-    name: `setup.defender`,
-  });
+  const defenderIdx = form.getValues().setup.defender || -1;
 
   function apply() {
-    const toSet = applyResult(result);
+    if (calcs.step !== Step.DamageResolve) {
+      return <></>;
+    }
+    const toSet = applyResult(calcs);
     for (const [key, value] of Object.entries(toSet)) {
       form.setValue(
         `character.list.${defenderIdx as number}.${key as keyof CharacterRecord}`,
@@ -366,21 +228,21 @@ function DamageResolve(props: {
       keepValues: true,
     });
     addItem({
-      range: result.range,
-      totalDamage: result.totalDamage,
-      awe: result.awe,
-      damageRoll: result.damageRoll,
-      injury: result.injury,
-      result: result.result,
-      attacker: props.attacker.name,
-      defender: props.defender.name,
-      weapon: props.attacker.weapon.name,
-      attackRoll: props.attackRoll,
-      defenseRoll: props.defenseRoll,
+      range: calcs.range,
+      totalDamage: calcs.totalDamage,
+      awe: calcs.awe,
+      damageRoll: calcs.damageRoll,
+      injury: calcs.injury,
+      result: calcs.result,
+      attacker: calcs.attacker.name,
+      defender: calcs.defender.name,
+      weapon: calcs.attacker.weapon.name,
+      attackRoll: calcs.attackRoll,
+      defenseRoll: calcs.defenseRoll,
       newStatus:
-        Number(props.defender.woundState) <= result.newStatus
+        Number(calcs.defender.woundState) <= calcs.newStatus
           ? undefined
-          : result.newStatus,
+          : calcs.newStatus,
     });
   }
 
@@ -401,17 +263,14 @@ export function CombatForm(props: {
   addItem: (this: void, item: LogItem) => void;
 }) {
   const { form, addItem } = props;
-  const values = form.getValues();
+  // TODO: Optimize this?
+  const values = useWatch({
+    control: form.control,
+    defaultValue: DefaultValues,
+  }) as SelectForm;
   const characters = values.character.list.map((x) => x.name);
-
-  const setup = trySetupCombat(form);
-  const hasErrors = typeof setup !== "object";
-
-  useEffect(() => {
-    if (hasErrors) {
-      resetDiceValues(form);
-    }
-  }, [hasErrors]);
+  const calcs = useCalcs(values);
+  const { error } = calcs;
 
   return (
     <div className="flex gap-4 flex-col">
@@ -427,12 +286,16 @@ export function CombatForm(props: {
         label="Defender"
         optionLabels={characters}
       />
-
-      {typeof setup === "object" ? (
-        <CombatSetup {...setup} form={form} addItem={addItem} />
-      ) : (
-        <p className="text-[0.8rem] font-medium text-destructive">{setup}</p>
-      )}
+      <CombatSetup form={form} result={calcs} />
+      <CombatResolve form={form} calcs={calcs} />
+      <DamageResolve form={form} calcs={calcs} addItem={addItem} />
+      <p className="text-[0.8rem] font-medium text-destructive">
+        {error
+          ? error instanceof Error
+            ? error.message
+            : String(error)
+          : undefined}
+      </p>
     </div>
   );
 }

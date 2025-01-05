@@ -163,7 +163,7 @@ export type Character = Omit<CharacterRecord, "weapon" | "armor"> & {
   armor: Armor;
 };
 
-export function ListSelect<C extends yup.Maybe<yup.AnyObject>, T = any>(
+function ListSelect<C extends yup.Maybe<yup.AnyObject>, T>(
   t: yup.ISchema<T, C>
 ) {
   return yup.object({
