@@ -196,6 +196,16 @@ export const MapSchema = yup.object({
   snap: integer.label("Snap"),
 });
 
+const Vec2Schema = yup.object({
+  ["0"]: integer.required().label("X"),
+  ["1"]: integer.required().label("Y"),
+});
+
+export const ExplosionSchema = yup.object({
+  center: Vec2Schema.required().label("Center"),
+  radius: yup.number().required().label("Blast radius"),
+});
+
 export const SelectForm = yup.object({
   character: ListSelect(CharacterRecord),
   weapon: ListSelect(Weapon),
@@ -204,5 +214,6 @@ export const SelectForm = yup.object({
   setup: SetupSchema,
   toHit: ToHitSchema,
   resolve: ResolveSchema,
+  explosion: ExplosionSchema,
 });
 export type SelectForm = yup.InferType<typeof SelectForm>;

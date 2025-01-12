@@ -313,4 +313,8 @@ export const DefaultValues: SelectForm = {
     snap: 1,
     pixelsPerUnit: 20,
   },
+  explosion: {
+    center: [0, 0],
+    radius: 0,
+  },
 };

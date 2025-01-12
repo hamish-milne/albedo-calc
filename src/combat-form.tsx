@@ -269,6 +269,39 @@ function DamageResolve(props: {
   );
 }
 
+function ExplosionCandidate(props: {
+  form: UseFormReturn<SelectForm>;
+  calcs: Calcs;
+}) {
+  const { form, calcs } = props;
+  if (calcs.step !== Step.Explosion) {
+    return <></>;
+  }
+  const { explosion } = calcs;
+  if (typeof explosion === "string") {
+    return <p className="text-destructive">Unable to hit</p>;
+  }
+  const radius = calcs.attacker.weapon.explosion || 0;
+  return (
+    <>
+      <p>
+        An explosion <b>{radius} meters</b> wide will occur next turn. Click
+        below before opening the Explosion tab:
+      </p>
+      <Button
+        onClick={() => {
+          form.setValue("explosion", {
+            center: explosion.target.c as [number, number],
+            radius,
+          });
+        }}
+      >
+        Copy Explosion
+      </Button>
+    </>
+  );
+}
+
 export function CombatForm(props: {
   form: UseFormReturn<SelectForm>;
   addItem: (this: void, item: LogItem) => void;
@@ -300,6 +333,7 @@ export function CombatForm(props: {
       <CombatSetup form={form} result={calcs} />
       <CombatResolve form={form} calcs={calcs} />
       <DamageResolve form={form} calcs={calcs} addItem={addItem} />
+      <ExplosionCandidate form={form} calcs={calcs} />
       <p className="text-[0.8rem] font-medium text-destructive">
         {error
           ? error instanceof Error

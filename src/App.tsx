@@ -29,6 +29,7 @@ import { BattleMap } from "./battlemap";
 import { cn } from "./lib/utils";
 import { Button } from "./components/ui/button";
 import { Sun, Moon } from "lucide-react";
+import { ExplosionForm } from "./explosion-form";
 
 export function TypographyH3(props: ComponentProps<"h3">) {
   const { className, ...cProps } = props;
@@ -157,6 +158,9 @@ function Main() {
         </TopLevelItem>
         <TopLevelItem value="combat" label="Combat">
           <CombatForm form={form} addItem={addItem} />
+        </TopLevelItem>
+        <TopLevelItem value="explosion" label="Explosion">
+          <ExplosionForm form={form} />
         </TopLevelItem>
         <TopLevelItem value="log" label="Log">
           <CombatLog items={items} deleteItem={deleteItem} />

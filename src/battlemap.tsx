@@ -326,13 +326,21 @@ function DrawCircle(
   );
 }
 
-function ExplosionMarker(props: { r1: Circle; pixelsPerUnit: number }) {
-  const { r1, pixelsPerUnit } = props;
+function ExplosionMarker(props: {
+  form: UseFormReturn<SelectForm>;
+  pixelsPerUnit: number;
+}) {
+  const { form, pixelsPerUnit } = props;
+  const { center, radius } = useWatch({
+    control: form.control,
+    name: "explosion",
+    defaultValue: { center: [0, 0], radius: 0 },
+  });
   return (
     <>
       {[1, 2, 3, 4, 5].map((x) => (
         <DrawCircle
-          def={{ c: r1.c, r: r1.r * x }}
+          def={{ c: center as [number, number], r: radius * x }}
           pixelsPerUnit={pixelsPerUnit}
           className="fill-red-500 opacity-10"
         />
@@ -341,7 +349,7 @@ function ExplosionMarker(props: { r1: Circle; pixelsPerUnit: number }) {
   );
 }
 
-function ExplosionMarkers(props: {
+function ExplosionCandidate(props: {
   form: UseFormReturn<SelectForm>;
   pixelsPerUnit: number;
 }) {
@@ -429,7 +437,8 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
                 </pattern>
               </defs>
               <rect width={width} height={height} fill="url(#battleGrid)" />
-              <ExplosionMarkers form={form} pixelsPerUnit={pixelsPerUnit} />
+              <ExplosionMarker form={form} pixelsPerUnit={pixelsPerUnit} />
+              <ExplosionCandidate form={form} pixelsPerUnit={pixelsPerUnit} />
               <CombatLine form={form} pixelsPerUnit={pixelsPerUnit} />
               {characters.map((_, idx) => (
                 <CharMarker
