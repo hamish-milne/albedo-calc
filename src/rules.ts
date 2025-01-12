@@ -36,8 +36,8 @@ export type AttackResult = "Miss" | "Tie" | "Hit" | "Crit";
 
 export type Circle = { c: vec2; r: number };
 
-export type ThrowResult = { maximum: Circle; target: Circle };
-export type EXResult = Circle;
+export type ThrowResult = { maximum?: Circle; target: Circle };
+export type EXResult = vec2;
 
 export type AttackOrThrowResult = AttackResult | ThrowResult | EXResult;
 
@@ -261,11 +261,11 @@ function getEXResult(params: {
   attackRoll: number | number[];
   defenseDice: "Hit" | "Miss" | number[];
   defenseRoll: number[];
-}): "Miss" | EXResult {
+}): "Miss" | ThrowResult {
   const { attacker, defender, attackRoll, defenseDice, defenseRoll } = params;
 
   if (defenseDice === "Hit") {
-    return { c: posAsVec(defender), r: attacker.weapon.explosion || 0 };
+    return { target: { c: posAsVec(defender), r: 0 } };
   }
   if (typeof defenseDice === "string") {
     return defenseDice;
@@ -274,7 +274,7 @@ function getEXResult(params: {
   const atkValue = Math.max(...roll);
   const deviation = Math.max(0, Math.max(...defenseRoll) - atkValue) * 6;
   const angle =
-    atkValue % 1 === 0
+    atkValue % 2 !== 0
       ? atkValue % 3 === 0
         ? 0.5
         : 1
@@ -290,7 +290,7 @@ function getEXResult(params: {
     1 + deviation / vec2.distance(aPos, dPos)
   );
   const newPoint = vec2.rotate([0, 0], targetPoint, dPos, angle * Math.PI);
-  return { c: round(newPoint), r: 1 };
+  return { target: { c: round(newPoint), r: 0 } };
 }
 
 export function isExplosion(params: { attacker: Character }) {

@@ -172,7 +172,7 @@ function ListSelect<C extends yup.Maybe<yup.AnyObject>, T>(
   });
 }
 
-const DiceRoll = yup.array(integer.required()).required();
+const DiceRoll = yup.array(integer.required().label("Dice roll")).required();
 
 export const SetupSchema = yup.object({
   attacker: integer.label("Attacker"),

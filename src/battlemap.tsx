@@ -17,6 +17,7 @@ import { MapForm } from "./custom-forms";
 import { DefaultChar, DefaultValues } from "./data";
 import { Step, useCalcs } from "./calc-provider";
 import type { Circle } from "./rules";
+import { vec2 } from "gl-matrix";
 
 const DraggableContext = createContext<{
   setHeld: (el: DragHandler) => void;
@@ -265,8 +266,7 @@ function CharMarker(
             y={-dragRegionSize / 2}
             width={dragRegionSize}
             height={dragRegionSize}
-            fill="none"
-            className="cursor-move pointer-events-bounding-box"
+            className="fill-none cursor-move pointer-events-bounding-box"
           />
         </g>
       )}
@@ -326,6 +326,21 @@ function DrawCircle(
   );
 }
 
+function ExplosionMarker(props: { r1: Circle; pixelsPerUnit: number }) {
+  const { r1, pixelsPerUnit } = props;
+  return (
+    <>
+      {[1, 2, 3, 4, 5].map((x) => (
+        <DrawCircle
+          def={{ c: r1.c, r: r1.r * x }}
+          pixelsPerUnit={pixelsPerUnit}
+          className="fill-red-500 opacity-10"
+        />
+      ))}
+    </>
+  );
+}
+
 function ExplosionMarkers(props: {
   form: UseFormReturn<SelectForm>;
   pixelsPerUnit: number;
@@ -345,41 +360,40 @@ function ExplosionMarkers(props: {
   if (typeof explosion === "string") {
     return <></>;
   }
-
-  if ("maximum" in explosion) {
+  if (explosion.target.r < 1) {
+    const p = vec2.scale([0, 0], explosion.target.c, pixelsPerUnit);
     return (
-      <>
-        <DrawCircle
-          def={explosion.maximum}
-          pixelsPerUnit={pixelsPerUnit}
-          fill="green"
-          opacity={0.2}
-        />
-        <DrawCircle
-          def={explosion.target}
-          pixelsPerUnit={pixelsPerUnit}
-          fill="red"
-          opacity={0.2}
-        />
-      </>
-    );
-  } else {
-    return (
-      <DrawCircle
-        def={explosion}
-        pixelsPerUnit={pixelsPerUnit}
-        fill="red"
-        opacity={0.2}
+      <Marker
+        type="Cross"
+        size={20}
+        transform={`translate(${p[0]},${p[1]})`}
+        className="stroke-lime-500 dark:stroke-lime-400 stroke-2"
       />
     );
   }
+  return (
+    <>
+      {explosion.maximum ? (
+        <DrawCircle
+          def={explosion.maximum}
+          pixelsPerUnit={pixelsPerUnit}
+          className="fill-blue-500 opacity-20"
+        />
+      ) : undefined}
+      <DrawCircle
+        def={explosion.target}
+        pixelsPerUnit={pixelsPerUnit}
+        className="fill-lime-400 opacity-20"
+      />
+    </>
+  );
 }
 
 export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
   const { form } = props;
   const characters = form.getValues("character.list");
 
-  const { width, height, ...config } = useWatch({
+  const config = useWatch({
     control: form.control,
     name: "map",
     defaultValue: {},
@@ -387,60 +401,49 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
   const pixelsPerUnit = config.pixelsPerUnit || 20;
   const snap = (config.snap || 1) * pixelsPerUnit;
   const gridCellSize = (config.gridCellSize || 1) * pixelsPerUnit;
+  const width = (config.width || 25) * pixelsPerUnit;
+  const height = (config.height || 25) * pixelsPerUnit;
 
   return (
     <>
       <div className="flex gap-2 flex-wrap *:flex-1 *:min-w-24">
         <MapForm form={form} />
       </div>
-      <DraggableProvider>
-        {(props) => (
-          <svg
-            width={(width || 25) * pixelsPerUnit}
-            height={(height || 25) * pixelsPerUnit}
-            {...props}
-            className="m-auto"
-          >
-            <defs>
-              <pattern
-                x={0}
-                y={0}
-                width={gridCellSize}
-                height={gridCellSize}
-                id="battleGrid"
-                patternUnits="userSpaceOnUse"
-              >
-                <rect
-                  x={0}
-                  y={0}
+      <div className="overflow-x-auto">
+        <DraggableProvider>
+          {(props) => (
+            <svg width={width} height={height} {...props} className="m-auto">
+              <defs>
+                <pattern
                   width={gridCellSize}
                   height={gridCellSize}
-                  fill="none"
-                  className="stroke-gray-300 dark:stroke-gray-500"
+                  id="battleGrid"
+                  patternUnits="userSpaceOnUse"
+                >
+                  <rect
+                    width={gridCellSize}
+                    height={gridCellSize}
+                    fill="none"
+                    className="stroke-gray-300 dark:stroke-gray-500"
+                  />
+                </pattern>
+              </defs>
+              <rect width={width} height={height} fill="url(#battleGrid)" />
+              <ExplosionMarkers form={form} pixelsPerUnit={pixelsPerUnit} />
+              <CombatLine form={form} pixelsPerUnit={pixelsPerUnit} />
+              {characters.map((_, idx) => (
+                <CharMarker
+                  key={idx}
+                  idx={idx}
+                  snap={snap}
+                  pixelsPerUnit={pixelsPerUnit}
+                  form={form}
                 />
-              </pattern>
-            </defs>
-            <rect
-              x={0}
-              y={0}
-              width={500}
-              height={500}
-              fill="url(#battleGrid)"
-            />
-            <CombatLine form={form} pixelsPerUnit={pixelsPerUnit} />
-            {characters.map((_, idx) => (
-              <CharMarker
-                key={idx}
-                idx={idx}
-                snap={snap}
-                pixelsPerUnit={pixelsPerUnit}
-                form={form}
-              />
-            ))}
-            <ExplosionMarkers form={form} pixelsPerUnit={pixelsPerUnit} />
-          </svg>
-        )}
-      </DraggableProvider>
+              ))}
+            </svg>
+          )}
+        </DraggableProvider>
+      </div>
     </>
   );
 }

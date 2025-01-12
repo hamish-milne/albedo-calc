@@ -57,6 +57,15 @@ function DiceGroup(props: {
 }) {
   const { form, dice, prefix, label } = props;
 
+  const prev = (form.getValues(prefix) as number[]) || [];
+  const shouldReset = dice.length < prev.length;
+  useEffect(() => {
+    if (shouldReset) {
+      const prev = (form.getValues(prefix) as number[]) || [];
+      form.setValue(prefix, prev.slice(0, dice.length));
+    }
+  }, [shouldReset, dice.length, form, prefix]);
+
   if (dice.length === 0) {
     return <></>;
   }
@@ -194,7 +203,9 @@ function resetDiceValues(form: UseFormReturn<SelectForm>) {
   ] as const;
   for (const name of names) {
     for (let i = 0; i < 10; i++) {
-      form.resetField(`${name}.${i}`, { defaultValue: 0 });
+      form.resetField(`${name}.${i}`, {
+        defaultValue: "" as unknown as number,
+      });
     }
   }
 }
