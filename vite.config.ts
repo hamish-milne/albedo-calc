@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import preact from "@preact/preset-vite";
 import path from "path";
 import { viteSingleFile } from "vite-plugin-singlefile";
 // import { analyzer } from "vite-bundle-analyzer";
@@ -7,7 +7,9 @@ import { viteSingleFile } from "vite-plugin-singlefile";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
+    preact({
+      devToolsEnabled: true,
+    }),
     viteSingleFile({
       removeViteModuleLoader: true,
       // deleteInlinedFiles: false,
