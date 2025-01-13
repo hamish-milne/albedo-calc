@@ -49,7 +49,7 @@ function ThresholdsTable(props: { defender: Character }) {
   );
 }
 
-function DiceGroup(props: {
+export function DiceGroup(props: {
   form: UseFormReturn<SelectForm>;
   dice: number[];
   prefix: Path<SelectForm>;
@@ -290,9 +290,11 @@ function ExplosionCandidate(props: {
       </p>
       <Button
         onClick={() => {
-          form.setValue("explosion", {
+          form.setValue("explosionSetup", {
             center: explosion.target.c as [number, number],
             radius,
+            baseDamage: calcs.attacker.weapon.baseDamage,
+            penDamage: calcs.attacker.weapon.penDamage || 0,
           });
         }}
       >

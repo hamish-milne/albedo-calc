@@ -10,7 +10,7 @@ import {
 import {
   attackResolve,
   attackSetup,
-  damageResolve,
+  weaponDamageResolve,
   getExplosionResult,
   isExplosion,
 } from "./rules";
@@ -20,11 +20,11 @@ export type CombatValues = Pick<
   "character" | "weapon" | "armor" | "resolve" | "setup" | "toHit"
 >;
 
-type Optional<T> =
+export type Optional<T> =
   | { success: true; data: T }
   | { success: false; error: unknown };
 
-function tryOrFail<T, Args extends unknown[]>(
+export function tryOrFail<T, Args extends unknown[]>(
   fn: (...args: Args) => T,
   ...args: Args
 ): Optional<T> {
@@ -35,7 +35,7 @@ function tryOrFail<T, Args extends unknown[]>(
   }
 }
 
-function getOrThrow<T extends "character" | "weapon" | "armor">(
+export function getOrThrow<T extends "character" | "weapon" | "armor">(
   idx: number,
   values: CombatValues,
   l: T
@@ -47,7 +47,7 @@ function getOrThrow<T extends "character" | "weapon" | "armor">(
   return c;
 }
 
-function getCharacter(
+export function getCharacter(
   idx: number | undefined,
   values: CombatValues
 ): Character {
@@ -118,7 +118,7 @@ function stepDamageResolve(
   });
   return {
     ...input,
-    ...damageResolve({
+    ...weaponDamageResolve({
       ...input,
       ...resolved,
     }),

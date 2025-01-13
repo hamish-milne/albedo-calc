@@ -334,8 +334,8 @@ function ExplosionMarker(props: {
   const { form, pixelsPerUnit, snap } = props;
   const { center, radius } = useWatch({
     control: form.control,
-    name: "explosion",
-    defaultValue: { center: [0, 0], radius: 0 },
+    name: "explosionSetup",
+    defaultValue: { center: [0, 0], radius: 0, penDamage: 0 },
   });
   return (
     <DraggableSVG
@@ -347,7 +347,7 @@ function ExplosionMarker(props: {
           x: toNearest(pos.x, snap),
           y: toNearest(pos.y, snap),
         };
-        form.setValue(`explosion.center`, [
+        form.setValue(`explosionSetup.center`, [
           newPos.x / pixelsPerUnit,
           newPos.y / pixelsPerUnit,
         ]);

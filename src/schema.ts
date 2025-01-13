@@ -196,14 +196,27 @@ export const MapSchema = yup.object({
   snap: integer.label("Snap"),
 });
 
-const Vec2Schema = yup.object({
-  ["0"]: integer.required().label("X"),
-  ["1"]: integer.required().label("Y"),
-});
+const Vec2Schema = yup.tuple([
+  integer.required().label("X"),
+  integer.required().label("Y"),
+]);
 
-export const ExplosionSchema = yup.object({
+export const ExplosionSetupSchema = yup.object({
   center: Vec2Schema.required().label("Center"),
   radius: yup.number().required().label("Blast radius"),
+  baseDamage: integer.label("Base damage"),
+  penDamage: integer.required().label("Penetration damage"),
+});
+
+export const ExplosionResolveSchema = yup.object({
+  rolls: yup
+    .array(
+      yup.object({
+        damageRoll: DiceRoll.label("Damage roll"),
+      })
+    )
+    .required()
+    .label("Dice rolls"),
 });
 
 export const SelectForm = yup.object({
@@ -214,6 +227,7 @@ export const SelectForm = yup.object({
   setup: SetupSchema,
   toHit: ToHitSchema,
   resolve: ResolveSchema,
-  explosion: ExplosionSchema,
+  explosionSetup: ExplosionSetupSchema,
+  explosionResolve: ExplosionResolveSchema,
 });
 export type SelectForm = yup.InferType<typeof SelectForm>;

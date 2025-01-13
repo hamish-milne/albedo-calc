@@ -6,6 +6,7 @@ import {
   Cover,
   WoundState,
   getPos,
+  CharacterRecord,
 } from "./schema";
 
 import { vec2, glMatrix } from "gl-matrix";
@@ -343,16 +344,9 @@ function getDamageDiceCount(params: {
   return total;
 }
 
-function getTotalDamage(params: {
-  attacker: Character;
-  defender: Character;
-  damageRoll: number[];
-}): number {
-  const { attacker, defender, damageRoll } = params;
+function getWeaponDamage(params: { attacker: Character }) {
+  const { attacker } = params;
   const { weapon } = attacker;
-  if (damageRoll.length == 0) {
-    return 0;
-  }
   let penDamage: number;
   switch (weapon.skill) {
     case "Melee":
@@ -362,11 +356,25 @@ function getTotalDamage(params: {
     default:
       penDamage = weapon.penDamage || 0;
   }
+  return {
+    baseDamage: weapon.baseDamage,
+    penDamage,
+  };
+}
+
+function getTotalDamage(params: {
+  defender: Character;
+  damageRoll: number[];
+  baseDamage: number;
+  penDamage: number;
+}): number {
+  const { baseDamage, penDamage, defender, damageRoll } = params;
+  if (damageRoll.length == 0) {
+    return 0;
+  }
   const passThreshold = damageRoll.filter((x) => x > defender.armor.deflection);
   return (
-    weapon.baseDamage +
-    Math.max(...damageRoll) +
-    passThreshold.length * penDamage
+    baseDamage + Math.max(...damageRoll) + passThreshold.length * penDamage
   );
 }
 
@@ -430,15 +438,15 @@ function getInjury(params: { defender: Character; newStatus: WoundState }) {
   }
 }
 
-function asNumber<T>(enumObj: unknown, value: unknown): T {
-  const x = isNaN(value as number)
-    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (enumObj as any)[value as string]
-    : Number(value);
+function asNumber<T extends { [key: string]: unknown }>(
+  enumObj: T,
+  value: keyof T
+) {
+  const x = isNaN(value as number) ? enumObj[value] : Number(value);
   if (isNaN(x as number)) {
     throw Error(`Unable to convert ${String(value)}`);
   }
-  return x as unknown as T;
+  return x as T[keyof T];
 }
 
 export function attackSetup(params: {
@@ -449,9 +457,9 @@ export function attackSetup(params: {
     ...params,
     attackDice: getAttackDice(params),
     ...getRange(params),
-    maxCover: asNumber<Cover>(Cover, params.defender.maxCover),
-    concealment: asNumber<Cover>(Cover, params.defender.concealment),
-    woundState: asNumber<WoundState>(WoundState, params.defender.woundState),
+    maxCover: asNumber(Cover, params.defender.maxCover),
+    concealment: asNumber(Cover, params.defender.concealment),
+    woundState: asNumber(WoundState, params.defender.woundState),
   };
   return {
     ...a,
@@ -470,7 +478,7 @@ export function attackResolve(params: {
   const a = {
     ...params,
     result: getAttackResult(params),
-    woundState: asNumber<WoundState>(WoundState, params.defender.woundState),
+    woundState: asNumber(WoundState, params.defender.woundState),
   };
   return {
     ...a,
@@ -478,9 +486,65 @@ export function attackResolve(params: {
   };
 }
 
-export function damageResolve(params: {
-  attacker: Character;
+export function explosionSetup(params: {
+  center: [number, number];
+  radius: number;
+  characters: Character[];
+}) {
+  const { center, radius, characters } = params;
+  const result: { character: number; damageDiceCount: number }[] = [];
+  for (let i = 0; i < characters.length; i++) {
+    const { x, y } = characters[i].position || { x: 0, y: 0 };
+    const distance = vec2.distance(center, [x, y]);
+    const ratio = Math.floor(distance / radius); // TODO: Cover?
+    const damageDiceCount = 5 - ratio + (ratio === 0 && distance < 0.5 ? 1 : 0);
+    if (damageDiceCount <= 0) {
+      continue;
+    }
+    result.push({ character: i, damageDiceCount });
+  }
+  return result;
+}
+
+export function explosionResolve(params: {
+  characters: Character[];
+  rolls: { character: number; damageRoll: number[] }[];
+  baseDamage?: number;
+  penDamage: number;
+}) {
+  const { characters, rolls } = params;
+
+  return {
+    results: rolls.map(({ character, damageRoll }) =>
+      damageResolve({
+        defender: characters[character],
+        damageRoll,
+        baseDamage: params.baseDamage || 0,
+        penDamage: params.penDamage,
+        range: Range.Short,
+        result: "Hit",
+      })
+    ),
+  };
+}
+
+export function weaponDamageResolve(params: {
   defender: Character;
+  attacker: Character;
+  damageRoll: number[];
+  range: Range;
+  result: AttackResult;
+}) {
+  return damageResolve({
+    ...params,
+    ...getWeaponDamage(params),
+  });
+}
+
+function damageResolve(params: {
+  defender: Character;
+  baseDamage: number;
+  penDamage: number;
   damageRoll: number[];
   range: Range;
   result: AttackResult;
@@ -501,7 +565,7 @@ export function damageResolve(params: {
 }
 
 export function applyResult(params: {
-  defender: Character;
+  defender: Character | CharacterRecord;
   newStatus: WoundState;
   injury: number;
   awe: number;

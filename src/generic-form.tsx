@@ -4,7 +4,11 @@ import {
   type Path,
   useWatch,
 } from "react-hook-form";
-import type { SchemaFieldDescription, SchemaObjectDescription } from "yup";
+import type {
+  SchemaFieldDescription,
+  SchemaInnerTypeDescription,
+  SchemaObjectDescription,
+} from "yup";
 import { Button } from "./components/ui/button";
 import { EnumField, TextField, BoolField } from "./custom-fields";
 import { ListSelectField } from "./custom-forms";
@@ -52,8 +56,16 @@ export function AnyField<TFieldValues extends FieldValues>(props: {
           type={type as SchemaObjectDescription}
         />
       );
+    case "tuple":
+      return (
+        <TupleField
+          form={form}
+          name={name}
+          type={type as SchemaInnerTypeDescription}
+        />
+      );
     default:
-      throw Error(`Unknown type: ${type.type}`);
+      return <p className="text-destructive">Unknown type: {type.type}</p>;
   }
 }
 
@@ -79,6 +91,39 @@ export function RecordField<TFieldValues extends FieldValues>(props: {
           name: `${name}.${x}` as Path<TFieldValues>,
           label: type.fields[x].label || x,
           type: type.fields[x],
+        })
+      )}
+    </div>
+  );
+}
+
+export function TupleField<TFieldValues extends FieldValues>(props: {
+  form: UseFormReturn<TFieldValues>;
+  type: SchemaInnerTypeDescription;
+  name: Path<TFieldValues>;
+  children?: (
+    this: void,
+    field: string,
+    props: AnyFieldProps<TFieldValues>
+  ) => JSX.Element;
+}) {
+  const { form, type, name } = props;
+  const children =
+    props.children || ((key, props) => <AnyField key={key} {...props} />);
+  const fields = type.innerType
+    ? type.innerType instanceof Array
+      ? type.innerType
+      : [type.innerType]
+    : [];
+
+  return (
+    <div className="flex flex-wrap gap-2 *:flex-1 *:min-w-12">
+      {fields.map((x, i) =>
+        children(String(i), {
+          form,
+          name: `${name}.${i}` as Path<TFieldValues>,
+          label: x.label || String(i),
+          type: x,
         })
       )}
     </div>
