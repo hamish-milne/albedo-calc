@@ -329,23 +329,47 @@ function DrawCircle(
 function ExplosionMarker(props: {
   form: UseFormReturn<SelectForm>;
   pixelsPerUnit: number;
+  snap: number;
 }) {
-  const { form, pixelsPerUnit } = props;
+  const { form, pixelsPerUnit, snap } = props;
   const { center, radius } = useWatch({
     control: form.control,
     name: "explosion",
     defaultValue: { center: [0, 0], radius: 0 },
   });
   return (
-    <>
-      {[1, 2, 3, 4, 5].map((x) => (
-        <DrawCircle
-          def={{ c: center as [number, number], r: radius * x }}
-          pixelsPerUnit={pixelsPerUnit}
-          className="fill-red-500 opacity-10"
-        />
-      ))}
-    </>
+    <DraggableSVG
+      handler={(e, _svg, pos) => {
+        if (e.buttons) {
+          return pos;
+        }
+        const newPos = {
+          x: toNearest(pos.x, snap),
+          y: toNearest(pos.y, snap),
+        };
+        form.setValue(`explosion.center`, [
+          newPos.x / pixelsPerUnit,
+          newPos.y / pixelsPerUnit,
+        ]);
+        return newPos;
+      }}
+    >
+      {(inner) => (
+        <g
+          {...inner}
+          transform={`translate(${center[0] * pixelsPerUnit},${center[1] * pixelsPerUnit})`}
+          className="cursor-move"
+        >
+          {[1, 2, 3, 4, 5].map((x) => (
+            <circle
+              key={x}
+              r={radius * x * pixelsPerUnit}
+              className="fill-red-500 opacity-25"
+            />
+          ))}
+        </g>
+      )}
+    </DraggableSVG>
   );
 }
 
@@ -375,7 +399,7 @@ function ExplosionCandidate(props: {
         type="Cross"
         size={20}
         transform={`translate(${p[0]},${p[1]})`}
-        className="stroke-lime-500 dark:stroke-lime-400 stroke-2"
+        className="stroke-lime-500 dark:stroke-lime-400 stroke-2 pointer-events-none"
       />
     );
   }
@@ -385,13 +409,13 @@ function ExplosionCandidate(props: {
         <DrawCircle
           def={explosion.maximum}
           pixelsPerUnit={pixelsPerUnit}
-          className="fill-blue-500 opacity-20"
+          className="fill-blue-500 opacity-20 pointer-events-none"
         />
       ) : undefined}
       <DrawCircle
         def={explosion.target}
         pixelsPerUnit={pixelsPerUnit}
-        className="fill-lime-400 opacity-20"
+        className="fill-lime-400 opacity-20 pointer-events-none"
       />
     </>
   );
@@ -437,8 +461,12 @@ export function BattleMap(props: { form: UseFormReturn<SelectForm> }) {
                 </pattern>
               </defs>
               <rect width={width} height={height} fill="url(#battleGrid)" />
-              <ExplosionMarker form={form} pixelsPerUnit={pixelsPerUnit} />
               <ExplosionCandidate form={form} pixelsPerUnit={pixelsPerUnit} />
+              <ExplosionMarker
+                form={form}
+                pixelsPerUnit={pixelsPerUnit}
+                snap={snap}
+              />
               <CombatLine form={form} pixelsPerUnit={pixelsPerUnit} />
               {characters.map((_, idx) => (
                 <CharMarker
