@@ -30,6 +30,7 @@ import { cn } from "./lib/utils";
 import { Button } from "./components/ui/button";
 import { Sun, Moon } from "lucide-react";
 import { ExplosionForm } from "./explosion-form";
+import { ResetButton } from "./reset";
 
 export function TypographyH3(props: ComponentProps<"h3">) {
   const { className, ...cProps } = props;
@@ -166,7 +167,10 @@ function Main() {
           <CombatLog items={items} deleteItem={deleteItem} />
         </TopLevelItem>
       </Accordion>
-      <ExportDialog form={form} />
+      <div className="flex gap-2 *:flex-1">
+        <ExportDialog form={form} />
+        <ResetButton form={form} />
+      </div>
     </Form>
   );
 }
