@@ -1,12 +1,13 @@
 import { useWatch, type UseFormReturn } from "react-hook-form";
 import {
+  CharacterRecord,
   ExplosionResolveSchema,
   ExplosionSetupSchema,
   WoundStateNames,
   type SelectForm,
 } from "./schema";
 import { AnyField, AnyForm } from "./generic-form";
-import { explosionResolve, explosionSetup } from "./rules";
+import { applyResult, explosionResolve, explosionSetup } from "./rules";
 import { DefaultValues } from "./data";
 import { getCharacter, tryOrFail } from "./calc-provider";
 import { DiceGroup } from "./combat-form";
@@ -18,6 +19,8 @@ import {
   TableBody,
   TableCell,
 } from "./components/ui/table";
+import { Button } from "./components/ui/button";
+import type { LogItem } from "./useCombatLog";
 
 enum ExplosionStep {
   Setup,
@@ -115,39 +118,78 @@ function ExplosionResolve(props: {
   );
 }
 
-function ExplosionComplete(props: { calcs: ExpCalcs }) {
-  const { calcs } = props;
+function ExplosionComplete(props: {
+  calcs: ExpCalcs;
+  form: UseFormReturn<SelectForm>;
+  addItem: (this: void, ...items: LogItem[]) => void;
+}) {
+  const { calcs, form, addItem } = props;
   if (calcs.step !== ExplosionStep.Complete) {
     return <></>;
   }
+
+  function apply() {
+    if (calcs.step !== ExplosionStep.Complete) {
+      return;
+    }
+    const toSet = calcs.results.map(applyResult);
+    for (let i = 0; i < toSet.length; i++) {
+      const r = calcs.results[i];
+      for (const [key, value] of Object.entries(toSet[i])) {
+        form.setValue(
+          `character.list.${r.defenderIdx}.${key as keyof CharacterRecord}`,
+          value
+        );
+      }
+    }
+    addItem(
+      ...calcs.results.map<LogItem>((r) => ({
+        type: "explosion",
+        defender: r.defender.name,
+        awe: r.awe,
+        damageRoll: r.damageRoll,
+        injury: r.injury,
+        newStatus: r.newStatus,
+        totalDamage: r.totalDamage,
+      }))
+    );
+    form.reset(undefined, { keepValues: true });
+  }
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Character</TableHead>
-          <TableHead>Damage total</TableHead>
-          <TableHead>Awe</TableHead>
-          <TableHead>Injury</TableHead>
-          <TableHead>Wound state</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {calcs.results.map((x, i) => (
-          <TableRow key={i}>
-            <TableCell>{x.defender.name}</TableCell>
-            <TableCell>{x.totalDamage}</TableCell>
-            <TableCell>{x.awe}</TableCell>
-            <TableCell>{x.injury}</TableCell>
-            <TableCell>{WoundStateNames[x.newStatus]}</TableCell>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Character</TableHead>
+            <TableHead>Damage total</TableHead>
+            <TableHead>Awe</TableHead>
+            <TableHead>Injury</TableHead>
+            <TableHead>Wound state</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {calcs.results.map((x, i) => (
+            <TableRow key={i}>
+              <TableCell>{x.defender.name}</TableCell>
+              <TableCell>{x.totalDamage}</TableCell>
+              <TableCell>{x.awe}</TableCell>
+              <TableCell>{x.injury}</TableCell>
+              <TableCell>{WoundStateNames[x.newStatus]}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <Button onClick={apply}>Apply result</Button>
+    </>
   );
 }
 
-export function ExplosionForm(props: { form: UseFormReturn<SelectForm> }) {
-  const { form } = props;
+export function ExplosionForm(props: {
+  form: UseFormReturn<SelectForm>;
+  addItem: (this: void, item: LogItem) => void;
+}) {
+  const { form, addItem } = props;
   const exp = useExplosion(form);
   const { error } = exp;
   return (
@@ -165,7 +207,7 @@ export function ExplosionForm(props: { form: UseFormReturn<SelectForm> }) {
         {(field, props) => <AnyField key={field} {...props} />}
       </AnyForm>
       <ExplosionResolve form={form} calcs={exp} />
-      <ExplosionComplete calcs={exp} />
+      <ExplosionComplete form={form} calcs={exp} addItem={addItem} />
       <p className="text-destructive">
         {error
           ? error instanceof Error

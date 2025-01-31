@@ -21,7 +21,7 @@ import {
   AccordionTrigger,
 } from "./components/ui/accordion";
 import { ObjectEditor } from "./generic-form";
-import { CombatLog, useCombatLog } from "./combat-log";
+import { CombatLog } from "./combat-log";
 import { CombatForm } from "./combat-form";
 import { CharacterForm, WeaponForm, ArmorForm } from "./custom-forms";
 import { ExportDialog } from "./export-dialog";
@@ -31,6 +31,7 @@ import { Button } from "./components/ui/button";
 import { Sun, Moon } from "lucide-react";
 import { ExplosionForm } from "./explosion-form";
 import { ResetButton } from "./reset";
+import { useCombatLog } from "./useCombatLog";
 
 export function TypographyH3(props: ComponentProps<"h3">) {
   const { className, ...cProps } = props;
@@ -161,7 +162,7 @@ function Main() {
           <CombatForm form={form} addItem={addItem} />
         </TopLevelItem>
         <TopLevelItem value="explosion" label="Explosion">
-          <ExplosionForm form={form} />
+          <ExplosionForm form={form} addItem={addItem} />
         </TopLevelItem>
         <TopLevelItem value="log" label="Log">
           <CombatLog items={items} deleteItem={deleteItem} />
@@ -188,6 +189,7 @@ function Title() {
           const current = theme === "system" ? systemTheme() : theme;
           setTheme(current === "dark" ? "light" : "dark");
         }}
+        className="min-w-9"
       >
         <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
         <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />

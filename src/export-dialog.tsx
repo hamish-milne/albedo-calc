@@ -57,7 +57,7 @@ function ExportContent(props: { form: UseFormReturn<SelectForm> }) {
     <>
       <Textarea
         ref={textArea}
-        className="h-[80vh] font-mono bg-accent text-xs"
+        className="h-full font-mono bg-accent text-xs"
         spellCheck="false"
         name="jsonContent"
         autoComplete="false"
@@ -65,7 +65,7 @@ function ExportContent(props: { form: UseFormReturn<SelectForm> }) {
         autoCorrect="false"
       />
 
-      <DialogFooter>
+      <DialogFooter className="gap-2 sm:space-x-0">
         <Button onClick={save}>Save to file</Button>
         <Button onClick={doImport}>Import</Button>
       </DialogFooter>
@@ -80,7 +80,10 @@ export function ExportDialog(props: { form: UseFormReturn<SelectForm> }) {
       <DialogTrigger asChild>
         <Button>Export</Button>
       </DialogTrigger>
-      <DialogContent aria-describedby={undefined}>
+      <DialogContent
+        aria-describedby={undefined}
+        className="max-h-screen h-full flex flex-col"
+      >
         <DialogHeader>
           <DialogTitle>Import/Export</DialogTitle>
         </DialogHeader>

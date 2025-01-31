@@ -65,6 +65,7 @@ function stepSetup(values: CombatValues) {
   const { attacker, defender } = values.setup || {};
   return attackSetup({
     attacker: getCharacter(attacker, values),
+    defenderIdx: defender ?? -1,
     defender: getCharacter(defender, values),
   });
 }

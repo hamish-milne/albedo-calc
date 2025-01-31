@@ -6,7 +6,6 @@ import {
   Cover,
   WoundState,
   getPos,
-  CharacterRecord,
 } from "./schema";
 
 import { vec2, glMatrix } from "gl-matrix";
@@ -450,6 +449,7 @@ function asNumber<T extends { [key: string]: unknown }>(
 }
 
 export function attackSetup(params: {
+  defenderIdx: number;
   attacker: Character;
   defender: Character;
 }) {
@@ -517,6 +517,7 @@ export function explosionResolve(params: {
   return {
     results: rolls.map(({ character, damageRoll }) =>
       damageResolve({
+        defenderIdx: character,
         defender: characters[character],
         damageRoll,
         baseDamage: params.baseDamage || 0,
@@ -529,6 +530,7 @@ export function explosionResolve(params: {
 }
 
 export function weaponDamageResolve(params: {
+  defenderIdx: number;
   defender: Character;
   attacker: Character;
   damageRoll: number[];
@@ -542,6 +544,7 @@ export function weaponDamageResolve(params: {
 }
 
 function damageResolve(params: {
+  defenderIdx: number;
   defender: Character;
   baseDamage: number;
   penDamage: number;
@@ -565,7 +568,7 @@ function damageResolve(params: {
 }
 
 export function applyResult(params: {
-  defender: Character | CharacterRecord;
+  defender: Character;
   newStatus: WoundState;
   injury: number;
   awe: number;

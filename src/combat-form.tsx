@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { type UseFormReturn, type Path, useWatch } from "react-hook-form";
-import type { LogItem } from "./combat-log";
+import type { LogItem } from "./useCombatLog";
 import { Button } from "./components/ui/button";
 import { TextField, RefField } from "./custom-fields";
 import { applyResult, getThresholds } from "./rules";
@@ -219,18 +219,16 @@ function DamageResolve(props: {
   if (calcs.step !== Step.DamageResolve) {
     return <></>;
   }
-  const { defender, totalDamage, newStatus, awe, injury } = calcs;
-
-  const defenderIdx = form.getValues().setup.defender || -1;
+  const { defender, defenderIdx, totalDamage, newStatus, awe, injury } = calcs;
 
   function apply() {
     if (calcs.step !== Step.DamageResolve) {
-      return <></>;
+      return;
     }
     const toSet = applyResult(calcs);
     for (const [key, value] of Object.entries(toSet)) {
       form.setValue(
-        `character.list.${defenderIdx as number}.${key as keyof CharacterRecord}`,
+        `character.list.${defenderIdx}.${key as keyof CharacterRecord}`,
         String(value)
       );
     }
